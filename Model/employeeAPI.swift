@@ -6,8 +6,7 @@ struct logindata: Codable {
     let jobTitle: String
     let password: String
     let email: String
-    
-    
+
     
    enum CodingKeys: String, CodingKey {
     case employeeNumber = "EmployeeNumber"
@@ -16,11 +15,10 @@ struct logindata: Codable {
     case password
     case email
     
-    
         }
     
     enum EmError: Error {
-        case invaildURL
+        case invalidURL
         case invalidResponse
         case invalidData
     }
@@ -38,7 +36,7 @@ struct logindata: Codable {
         let endpoint = "" //API SPOT
 
         guard let url = URL(string: endpoint) else {
-            throw EmError.invaildURL
+            throw EmError.invalidURL
         }
 
         var request = URLRequest(url: url)
@@ -82,4 +80,9 @@ struct logindata: Codable {
 
 }
 
+enum APIkey {
+    static let airtable = Bundle.main
+        .infoDictionary?["APITOKEN"] as? String ?? ""
+    
+}
 

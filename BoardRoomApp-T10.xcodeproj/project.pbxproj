@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BFBF2C1F2F065FE50064DAD3 /* Secterts.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		BFBF2BBA2F0513820064DAD3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,8 @@
 		BFBF2BAC2F0513800064DAD3 /* BoardRoomApp-T10.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BoardRoomApp-T10.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFBF2BB92F0513820064DAD3 /* BoardRoomApp-T10Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "BoardRoomApp-T10Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFBF2BC32F0513820064DAD3 /* BoardRoomApp-T10UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "BoardRoomApp-T10UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secterts.xcconfig; sourceTree = "<group>"; };
+		BFBF2C202F0660780064DAD3 /* BoardRoomApp-T10-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "BoardRoomApp-T10-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -85,6 +91,8 @@
 		BFBF2BA32F0513800064DAD3 = {
 			isa = PBXGroup;
 			children = (
+				BFBF2C202F0660780064DAD3 /* BoardRoomApp-T10-Info.plist */,
+				BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */,
 				BFBF2BEA2F0514DA0064DAD3 /* Model */,
 				BFBF2BAE2F0513800064DAD3 /* View */,
 				BFBF2BEB2F0514E20064DAD3 /* ViewModel */,
@@ -250,6 +258,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BFBF2C1F2F065FE50064DAD3 /* Secterts.xcconfig in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -285,6 +294,7 @@
 /* Begin XCBuildConfiguration section */
 		BFBF2BCB2F0513820064DAD3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -349,6 +359,7 @@
 		};
 		BFBF2BCC2F0513820064DAD3 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -406,6 +417,7 @@
 		};
 		BFBF2BCE2F0513820064DAD3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -414,6 +426,7 @@
 				DEVELOPMENT_TEAM = GSU9AG3547;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "BoardRoomApp-T10-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -438,6 +451,7 @@
 		};
 		BFBF2BCF2F0513820064DAD3 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -446,6 +460,7 @@
 				DEVELOPMENT_TEAM = GSU9AG3547;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "BoardRoomApp-T10-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -470,6 +485,7 @@
 		};
 		BFBF2BD12F0513820064DAD3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -492,6 +508,7 @@
 		};
 		BFBF2BD22F0513820064DAD3 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -514,6 +531,7 @@
 		};
 		BFBF2BD42F0513820064DAD3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -534,6 +552,7 @@
 		};
 		BFBF2BD52F0513820064DAD3 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
