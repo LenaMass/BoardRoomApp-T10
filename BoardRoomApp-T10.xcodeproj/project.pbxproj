@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		BFBF2C1F2F065FE50064DAD3 /* Secterts.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = BFBF2C1E2F065FD10064DAD3 /* Secterts.xcconfig */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		BFBF2BBA2F0513820064DAD3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -258,7 +254,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BFBF2C1F2F065FE50064DAD3 /* Secterts.xcconfig in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

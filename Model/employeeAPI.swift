@@ -7,42 +7,49 @@ struct logindata: Codable {
     let password: String
     let email: String
 
+    enum CodingKeys: String, CodingKey {
+        case employeeNumber = "EmployeeNumber"
+        case name
+        case jobTitle = "job_title"
+        case password
+        case email
+    }
+
     
-   enum CodingKeys: String, CodingKey {
-    case employeeNumber = "EmployeeNumber"
-    case name
-    case jobTitle = "job_title"
-    case password
-    case email
-    
-        }
-    
+    enum APIkey {
+        static let airtable = Bundle.main
+            .infoDictionary?["APITOKEN"] as? String ?? ""
+    }
+
     enum EmError: Error {
         case invalidURL
         case invalidResponse
         case invalidData
     }
-    
+
     struct AirtableResponse: Codable {
         let records: [Record]
     }
-    
+
     struct Record: Codable {
         let fields: logindata
     }
-    
+
     static func getUser(logindata: Int) async throws -> logindata {
 
-        let endpoint = "" //API SPOT
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.airtable.com"
+        components.path = "/v0/appElKqRPusTLsnNe/employees"
 
-        guard let url = URL(string: endpoint) else {
+        guard let url = components.url else {
             throw EmError.invalidURL
         }
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue(
-            "", //TOKEN
+            "", // TOKEN
             forHTTPHeaderField: "Authorization"
         )
 
@@ -63,7 +70,7 @@ struct logindata: Codable {
 
         return user
     }
-
+    
     static func login(
         employeeNumber: Int,
         password: String
@@ -77,12 +84,5 @@ struct logindata: Codable {
 
         return user
     }
-
-}
-
-enum APIkey {
-    static let airtable = Bundle.main
-        .infoDictionary?["APITOKEN"] as? String ?? ""
-    
 }
 
