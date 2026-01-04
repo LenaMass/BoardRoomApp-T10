@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RoomDetailView: View {
-    let room: RoomInfo? 
+    let room: RoomInfo?
 
     private let days: [(day: String, weekDay: String)] = [
         ("16", "Thu"),
@@ -133,4 +133,3 @@ struct RoomDetailView: View {
 #Preview {
     RoomDetailView(room: nil)
 }
-

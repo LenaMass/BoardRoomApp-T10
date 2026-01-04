@@ -1,32 +1,31 @@
 import SwiftUI
 import Combine
 
+
 @MainActor
 final class LoginViewModel: ObservableObject {
-    @Published var user : logindata?
     @Published var loginError: String = ""
-    
-    func login (
-        employeeNumberInput: String,
-        passwordInput: String
-    ) async {
+    @Published var isLoggedIn: Bool = false
+    @Published var user: logindata? = nil
+
+    func login(employeeNumberInput: String, passwordInput: String) async {
         loginError = ""
-        
-        guard let employeeNumber = Int(employeeNumberInput),
-        !passwordInput.isEmpty
-        else {
-            loginError = "Employee number must be a number"
+        isLoggedIn = false
+
+        guard let employeeNumber = Int(employeeNumberInput.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            loginError = "Invalid job number"
             return
         }
+
         do {
-            user = try await logindata.login(
+            let loggedUser = try await logindata.login(
                 employeeNumber: employeeNumber,
-                password:passwordInput
+                password: passwordInput
             )
-            print("Login success", user?.name ?? "")
+            user = loggedUser
+            isLoggedIn = true
         } catch {
-            loginError = "Invalid employee number or password"
+            loginError = "Invalid number or password"
         }
     }
 }
-

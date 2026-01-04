@@ -15,16 +15,11 @@ struct logindata: Codable {
         case email
     }
 
-    
-    enum APIkey {
-        static let airtable = Bundle.main
-            .infoDictionary?["APITOKEN"] as? String ?? ""
-    }
-
     enum EmError: Error {
         case invalidURL
         case invalidResponse
         case invalidData
+        case missingAPIToken
     }
 
     struct AirtableResponse: Codable {
@@ -35,7 +30,13 @@ struct logindata: Codable {
         let fields: logindata
     }
 
-    static func getUser(logindata: Int) async throws -> logindata {
+    static func getUser(logindata employeeNumber: Int) async throws -> logindata {
+
+        guard let apiToken = Bundle.main.infoDictionary?["APIToken"] as? String,
+              !apiToken.isEmpty,
+              !apiToken.contains("$(") else {
+            throw EmError.missingAPIToken
+        }
 
         var components = URLComponents()
         components.scheme = "https"
@@ -49,14 +50,14 @@ struct logindata: Codable {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue(
-            "", // TOKEN
+            "Bearer \(apiToken)",
             forHTTPHeaderField: "Authorization"
         )
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let response = response as? HTTPURLResponse,
-              response.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
             throw EmError.invalidResponse
         }
 
@@ -64,13 +65,12 @@ struct logindata: Codable {
 
         guard let user = decoded.records
             .map({ $0.fields })
-            .first(where: { $0.employeeNumber == logindata }) else {
+            .first(where: { $0.employeeNumber == employeeNumber }) else {
             throw EmError.invalidData
         }
 
         return user
     }
-    
     static func login(
         employeeNumber: Int,
         password: String
@@ -78,7 +78,7 @@ struct logindata: Codable {
 
         let user = try await getUser(logindata: employeeNumber)
 
-        if user.password != password {
+        guard user.password == password else {
             throw EmError.invalidData
         }
 
