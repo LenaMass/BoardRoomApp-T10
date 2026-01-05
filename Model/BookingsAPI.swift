@@ -19,15 +19,36 @@ struct BookingData: Codable, Identifiable {
         }
     }
 
-    enum BookingError: Error {
+    enum BookingError: Error, LocalizedError {
         case invalidURL
-        case invalidResponse
+        case invalidResponse(statusCode: Int, message: String)
         case invalidData
         case missingAPIToken
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidURL:
+                return "Invalid URL"
+            case .invalidResponse(let status, let message):
+                return "Airtable request failed (\(status)): \(message)"
+            case .invalidData:
+                return "Invalid response data"
+            case .missingAPIToken:
+                return "Missing APIToken in Info.plist"
+            }
+        }
     }
 
     struct AirtableResponse: Codable {
         let records: [BookingData]
+    }
+
+    private struct AirtableErrorResponse: Codable {
+        let error: AirtableError
+        struct AirtableError: Codable {
+            let type: String
+            let message: String
+        }
     }
 
     private struct CreateBookingRequest: Codable {
@@ -69,9 +90,15 @@ struct BookingData: Codable, Identifiable {
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let http = response as? HTTPURLResponse,
-              http.statusCode == 200 else {
-            throw BookingError.invalidResponse
+        guard let http = response as? HTTPURLResponse else {
+            throw BookingError.invalidResponse(statusCode: -1, message: "No HTTP response")
+        }
+
+        guard http.statusCode == 200 else {
+            throw BookingError.invalidResponse(
+                statusCode: http.statusCode,
+                message: parseAirtableErrorMessage(from: data)
+            )
         }
 
         let decoded = try JSONDecoder().decode(AirtableResponse.self, from: data)
@@ -113,9 +140,15 @@ struct BookingData: Codable, Identifiable {
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let http = response as? HTTPURLResponse,
-              (200...299).contains(http.statusCode) else {
-            throw BookingError.invalidResponse
+        guard let http = response as? HTTPURLResponse else {
+            throw BookingError.invalidResponse(statusCode: -1, message: "No HTTP response")
+        }
+
+        guard (200...299).contains(http.statusCode) else {
+            throw BookingError.invalidResponse(
+                statusCode: http.statusCode,
+                message: parseAirtableErrorMessage(from: data)
+            )
         }
 
         let decoded = try JSONDecoder().decode(AirtableResponse.self, from: data)
@@ -163,9 +196,15 @@ struct BookingData: Codable, Identifiable {
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let http = response as? HTTPURLResponse,
-              (200...299).contains(http.statusCode) else {
-            throw BookingError.invalidResponse
+        guard let http = response as? HTTPURLResponse else {
+            throw BookingError.invalidResponse(statusCode: -1, message: "No HTTP response")
+        }
+
+        guard (200...299).contains(http.statusCode) else {
+            throw BookingError.invalidResponse(
+                statusCode: http.statusCode,
+                message: parseAirtableErrorMessage(from: data)
+            )
         }
 
         let decoded = try JSONDecoder().decode(AirtableResponse.self, from: data)
@@ -196,13 +235,26 @@ struct BookingData: Codable, Identifiable {
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let http = response as? HTTPURLResponse,
-              (200...299).contains(http.statusCode) else {
-            throw BookingError.invalidResponse
+        guard let http = response as? HTTPURLResponse else {
+            throw BookingError.invalidResponse(statusCode: -1, message: "No HTTP response")
+        }
+
+        guard (200...299).contains(http.statusCode) else {
+            throw BookingError.invalidResponse(
+                statusCode: http.statusCode,
+                message: parseAirtableErrorMessage(from: data)
+            )
         }
 
         let decoded = try JSONDecoder().decode(DeleteResponse.self, from: data)
         return decoded.records.first?.deleted == true
+    }
+
+    private static func parseAirtableErrorMessage(from data: Data) -> String {
+        if let err = try? JSONDecoder().decode(AirtableErrorResponse.self, from: data) {
+            return "\(err.error.type): \(err.error.message)"
+        }
+        return String(data: data, encoding: .utf8) ?? "Unknown error"
     }
 
     private static func loadToken() throws -> String {

@@ -1,12 +1,13 @@
 import SwiftUI
 import Combine
 
-
 @MainActor
 final class LoginViewModel: ObservableObject {
     @Published var loginError: String = ""
     @Published var isLoggedIn: Bool = false
     @Published var user: logindata? = nil
+
+    @AppStorage("employeeNumber") private var storedEmployeeNumber: Int = 0
 
     func login(employeeNumberInput: String, passwordInput: String) async {
         loginError = ""
@@ -23,9 +24,11 @@ final class LoginViewModel: ObservableObject {
                 password: passwordInput
             )
             user = loggedUser
+            storedEmployeeNumber = loggedUser.employeeNumber
             isLoggedIn = true
         } catch {
             loginError = "Invalid number or password"
         }
     }
 }
+

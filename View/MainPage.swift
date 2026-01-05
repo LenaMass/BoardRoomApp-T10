@@ -1,4 +1,5 @@
 import SwiftUI
+
 enum RoomFeature: Hashable {
     case wifi
     case screen
@@ -30,6 +31,7 @@ struct RoomInfo: Identifiable, Hashable {
     let floor: String
     let people: String
     let imageName: String
+    let imageURL: String?
     let features: [RoomFeature]
     let description: String
 }
@@ -38,59 +40,73 @@ struct BoardRoomsView: View {
 
     struct DayModel: Identifiable {
         let id = UUID()
+        let date: Date
         let day: String
         let weekDay: String
     }
 
-    @State private var selectedDayIndex = 0
-    private let days: [DayModel] = [
-        .init(day: "16", weekDay: "Thu"),
-        .init(day: "19", weekDay: "Sun"),
-        .init(day: "20", weekDay: "Mon"),
-        .init(day: "21", weekDay: "Tue"),
-        .init(day: "22", weekDay: "Wed"),
-        .init(day: "23", weekDay: "Thu"),
-        .init(day: "26", weekDay: "Sun"),
-        .init(day: "27", weekDay: "Mon"),
-        .init(day: "28", weekDay: "Tue")
-    ]
+    @State private var boardrooms: [BoardroomRecord] = []
+    @State private var selectedDayIndex: Int = 0
+    @State private var bookings: [BookingData] = []
+    @State private var bookingsError: String = ""
+    @State private var isLoadingBookings = false
+
+    private var monthTitle: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM"
+        return formatter.string(from: Date())
+    }
+
+    private var todayTagText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMMM"
+        return formatter.string(from: Date())
+    }
+
+    private var days: [DayModel] {
+        let calendar = Calendar.current
+        let today = Date()
+        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
+        let range = calendar.range(of: .day, in: .month, for: today) ?? 1..<2
+
+        let formatterDay = DateFormatter()
+        formatterDay.dateFormat = "d"
+
+        let formatterWeekday = DateFormatter()
+        formatterWeekday.dateFormat = "EEE"
+
+        return range.compactMap { day in
+            guard let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) else { return nil }
+            return DayModel(
+                date: date,
+                day: formatterDay.string(from: date),
+                weekDay: formatterWeekday.string(from: date)
+            )
+        }
+    }
+
+    private var todayIndexInMonth: Int {
+        let calendar = Calendar.current
+        let today = Date()
+        let day = calendar.component(.day, from: today)
+        let idx = day - 1
+        return max(0, min(idx, days.count - 1))
+    }
+
+    private var selectedDate: Date {
+        guard days.indices.contains(selectedDayIndex) else { return Date() }
+        return days[selectedDayIndex].date
+    }
 
     private let myRoom = RoomInfo(
         title: "Creative Space",
         floor: "Floor 5",
         people: "1",
         imageName: "room1",
+        imageURL: nil,
         features: [.wifi],
-        description:
-        "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
+        description: "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
     )
-
-    private let rooms: [RoomInfo] = [
-        RoomInfo(
-            title: "Creative Space",
-            floor: "Floor 5",
-            people: "1",
-            imageName: "room1",
-            features: [.wifi],
-            description: "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-        ),
-        RoomInfo(
-            title: "Ideation Room",
-            floor: "Floor 3",
-            people: "16",
-            imageName: "room2",
-            features: [.wifi, .screen],
-            description: "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-        ),
-        RoomInfo(
-            title: "Inspiration Room",
-            floor: "Floor 1",
-            people: "18",
-            imageName: "room3",
-            features: [.wifi, .mic, .control],
-            description: "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-        )
-    ]
 
     var body: some View {
         NavigationStack {
@@ -99,7 +115,6 @@ struct BoardRoomsView: View {
 
                     BannerView()
                         .padding(.top, 8)
-
 
                     VStack(spacing: 12) {
                         HStack {
@@ -111,14 +126,17 @@ struct BoardRoomsView: View {
                         }
 
                         NavigationLink {
-                            RoomDetailView(room: myRoom)
+                            RoomDetailView(room: myRoom, initialDate: Date()) {
+                                await fetchData()
+                            }
                         } label: {
                             RoomCard(
                                 title: myRoom.title,
                                 floor: myRoom.floor,
                                 people: myRoom.people,
-                                tag: .date("28 March"),
+                                tag: .date(todayTagText),
                                 imageName: myRoom.imageName,
+                                imageURL: myRoom.imageURL,
                                 features: myRoom.features
                             )
                             .frame(height: 122)
@@ -126,12 +144,28 @@ struct BoardRoomsView: View {
                         .buttonStyle(.plain)
                     }
 
-                    // MARK: - Calendar + Rooms
-
                     VStack(alignment: .leading, spacing: 16) {
 
-                        Text("All bookings for March")
-                            .font(.headline)
+                        HStack {
+                            Text("All bookings for \(monthTitle)")
+                                .font(.headline)
+
+                            Spacer()
+
+                            if isLoadingBookings {
+                                ProgressView()
+                            } else {
+                                Text("Bookings: \(bookings.count)")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+
+                        if !bookingsError.isEmpty {
+                            Text(bookingsError)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 18) {
@@ -152,13 +186,21 @@ struct BoardRoomsView: View {
                         }
 
                         VStack(spacing: 12) {
-                            ForEach(rooms.indices, id: \.self) { i in
-                                let r = rooms[i]
+                            ForEach(apiRooms.indices, id: \.self) { i in
+                                let r = apiRooms[i]
 
-                                let status: RoomCard.Status = (i == 0) ? .available : .unavailable
+                                let isUnavailable = BoardroomsAPI.isRoomBooked(
+                                    roomTitle: r.title,
+                                    bookings: bookings,
+                                    boardrooms: boardrooms,
+                                    on: selectedDate
+                                )
+                                let status: RoomCard.Status = isUnavailable ? .unavailable : .available
 
                                 NavigationLink {
-                                    RoomDetailView(room: r)
+                                    RoomDetailView(room: r, initialDate: selectedDate) {
+                                        await fetchData()
+                                    }
                                 } label: {
                                     RoomCard(
                                         title: r.title,
@@ -166,6 +208,7 @@ struct BoardRoomsView: View {
                                         people: r.people,
                                         tag: .status(status),
                                         imageName: r.imageName,
+                                        imageURL: r.imageURL,
                                         features: r.features
                                     )
                                 }
@@ -182,10 +225,64 @@ struct BoardRoomsView: View {
             .toolbarBackground(Color.blueButton, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .task {
+                selectedDayIndex = todayIndexInMonth
+                await fetchData()
+            }
+            .refreshable {
+                await fetchData()
+            }
         }
-        .onAppear {
-           // bookingVM.fetchBookings()
+    }
+
+    private var apiRooms: [RoomInfo] {
+        boardrooms.compactMap { rec in
+            guard let f = rec.fields else { return nil }
+            let title = f.name ?? ""
+            if title.isEmpty { return nil }
+
+            let floor = "Floor \(f.floorNo ?? 0)"
+            let people = "\(f.seatNo ?? 0)"
+            let desc = f.description ?? ""
+            let imgURL = f.imageURL
+            let features = mapFacilitiesToFeatures(f.facilities ?? [])
+
+            return RoomInfo(
+                title: title,
+                floor: floor,
+                people: people,
+                imageName: "room1",
+                imageURL: imgURL,
+                features: features,
+                description: desc
+            )
         }
+    }
+
+    private func mapFacilitiesToFeatures(_ facilities: [String]) -> [RoomFeature] {
+        let lower = facilities.map { $0.lowercased() }
+        var out: [RoomFeature] = []
+
+        if lower.contains(where: { $0.contains("wifi") }) { out.append(.wifi) }
+        if lower.contains(where: { $0.contains("screen") || $0.contains("display") || $0.contains("tv") }) { out.append(.screen) }
+        if lower.contains(where: { $0.contains("mic") }) { out.append(.mic) }
+        if lower.contains(where: { $0.contains("control") || $0.contains("controller") }) { out.append(.control) }
+
+        return out
+    }
+
+    @MainActor
+    private func fetchData() async {
+        isLoadingBookings = true
+        bookingsError = ""
+        do {
+            let result = try await BoardroomsAPI.fetchData()
+            bookings = result.bookings
+            boardrooms = result.boardrooms
+        } catch {
+            bookingsError = "Failed to load data"
+        }
+        isLoadingBookings = false
     }
 }
 
@@ -221,9 +318,7 @@ struct BannerView: View {
 
                 VStack {
                     Spacer()
-                    Button(action: {
-                        print("Book now tapped")
-                    }) {
+                    Button(action: {}) {
                         HStack(spacing: 8) {
                             Text("Book now")
                                 .foregroundColor(.white)
@@ -249,8 +344,6 @@ struct BannerView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
-
-// MARK: - Day Chip
 
 struct DayChip: View {
     let day: String
@@ -278,8 +371,6 @@ struct DayChip: View {
         }
     }
 }
-
-// MARK: - Room Card
 
 struct RoomCard: View {
 
@@ -319,6 +410,7 @@ struct RoomCard: View {
     var people: String
     var tag: Tag?
     var imageName: String
+    var imageURL: String?
     var features: [RoomFeature] = []
 
     var body: some View {
@@ -326,9 +418,7 @@ struct RoomCard: View {
 
             HStack(spacing: 12) {
 
-                Image(imageName)
-                    .resizable()
-                    .scaledToFill()
+                RoomCardImage(imageName: imageName, imageURL: imageURL)
                     .frame(width: 106, height: 106)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
@@ -391,6 +481,29 @@ struct RoomCard: View {
     }
 }
 
+struct RoomCardImage: View {
+    let imageName: String
+    let imageURL: String?
+
+    var body: some View {
+        if let imageURL, let url = URL(string: imageURL) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                default:
+                    Image(imageName).resizable().scaledToFill()
+                }
+            }
+        } else {
+            Image(imageName)
+                .resizable()
+                .scaledToFill()
+        }
+    }
+}
+
 #Preview {
     BoardRoomsView()
 }
+

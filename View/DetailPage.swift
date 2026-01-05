@@ -2,30 +2,104 @@ import SwiftUI
 
 struct RoomDetailView: View {
     let room: RoomInfo?
+    let initialDate: Date
+    let onBooked: () async -> Void
 
-    private let days: [(day: String, weekDay: String)] = [
-        ("16", "Thu"),
-        ("19", "Sun"),
-        ("20", "Mon"),
-        ("21", "Tue"),
-        ("22", "Wed"),
-        ("23", "Thu"),
-        ("26", "Sun"),
-        ("27", "Mon"),
-        ("28", "Tue")
-    ]
+    struct DayModel: Identifiable {
+        let id = UUID()
+        let date: Date
+        let day: String
+        let weekDay: String
+    }
 
-    @State private var selectedDayIndex = 1
+    @AppStorage("employeeNumber") private var employeeNumber: Int = 0
+
+    @State private var selectedDayIndex = 0
+    @State private var isBooking = false
+    @State private var bookingMessage = ""
+    @State private var bookingError = ""
+
+    init(room: RoomInfo?, initialDate: Date = Date(), onBooked: @escaping () async -> Void = {}) {
+        self.room = room
+        self.initialDate = initialDate
+        self.onBooked = onBooked
+    }
+
+    private var monthTitle: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM"
+        return formatter.string(from: initialDate)
+    }
+
+    private var days: [DayModel] {
+        let calendar = Calendar.current
+        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: initialDate)) ?? initialDate
+        let range = calendar.range(of: .day, in: .month, for: initialDate) ?? 1..<2
+
+        let formatterDay = DateFormatter()
+        formatterDay.dateFormat = "d"
+
+        let formatterWeekday = DateFormatter()
+        formatterWeekday.dateFormat = "EEE"
+
+        return range.compactMap { day in
+            guard let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) else { return nil }
+            return DayModel(
+                date: date,
+                day: formatterDay.string(from: date),
+                weekDay: formatterWeekday.string(from: date)
+            )
+        }
+    }
+
+    private var initialIndexInMonth: Int {
+        let calendar = Calendar.current
+        let day = calendar.component(.day, from: initialDate)
+        let idx = day - 1
+        return max(0, min(idx, days.count - 1))
+    }
+
+    private var selectedDate: Date {
+        guard days.indices.contains(selectedDayIndex) else { return initialDate }
+        return days[selectedDayIndex].date
+    }
+
+    private var selectedDateInt: Int {
+        let cal = Calendar.current
+        let y = cal.component(.year, from: selectedDate)
+        let m = cal.component(.month, from: selectedDate)
+        let d = cal.component(.day, from: selectedDate)
+        return (y * 10000) + (m * 100) + d
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
 
-                Image(room?.imageName ?? "")
-                    .resizable()
-                    .scaledToFill()
+                if let urlString = room?.imageURL,
+                   let url = URL(string: urlString),
+                   !urlString.isEmpty {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        default:
+                            Image(room?.imageName ?? "")
+                                .resizable()
+                                .scaledToFill()
+                        }
+                    }
                     .frame(height: 260)
                     .clipped()
+                } else {
+                    Image(room?.imageName ?? "")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 260)
+                        .clipped()
+                }
 
                 HStack {
                     HStack(spacing: 6) {
@@ -83,7 +157,7 @@ struct RoomDetailView: View {
                 .padding(.horizontal, 16)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("All bookings for March")
+                    Text("All bookings for \(monthTitle)")
                         .font(.headline)
 
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -105,17 +179,34 @@ struct RoomDetailView: View {
                 }
                 .padding(.horizontal, 16)
 
-                Button {
-                    print("Booking tapped")
-                } label: {
-                    Text("Booking")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.OR_1)
-                        .cornerRadius(12)
+                if !bookingError.isEmpty {
+                    Text(bookingError)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(.horizontal, 16)
                 }
+
+                if !bookingMessage.isEmpty {
+                    Text(bookingMessage)
+                        .font(.caption)
+                        .foregroundColor(.green)
+                        .padding(.horizontal, 16)
+                }
+
+                Button {
+                    Task { await bookRoom() }
+                } label: {
+                    ZStack {
+                        Text(isBooking ? "Booking..." : "Booking")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.OR_1)
+                    .cornerRadius(12)
+                }
+                .disabled(isBooking)
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
 
@@ -127,9 +218,62 @@ struct RoomDetailView: View {
         .toolbarBackground(Color.blueButton, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .onAppear {
+            selectedDayIndex = initialIndexInMonth
+        }
+    }
+
+    @MainActor
+    private func bookRoom() async {
+        bookingError = ""
+        bookingMessage = ""
+
+        guard let roomTitle = room?.title, !roomTitle.isEmpty else {
+            bookingError = "Room not found"
+            return
+        }
+
+        if employeeNumber == 0 {
+            bookingError = "Employee number not found"
+            return
+        }
+
+        isBooking = true
+        defer { isBooking = false }
+
+        do {
+            let data = try await BoardroomsAPI.fetchData()
+
+            guard let roomID = BoardroomsAPI.boardroomRecordID(for: roomTitle, in: data.boardrooms) else {
+                bookingError = "Room id not found in Airtable"
+                return
+            }
+
+            let alreadyBooked = data.bookings.contains {
+                $0.fields.boardroomID == roomID && $0.fields.date == selectedDateInt
+            }
+
+            if alreadyBooked {
+                bookingError = "This room is already booked for the selected day"
+                return
+            }
+
+            _ = try await BookingData.createBooking(
+                status: "Confirmed",
+                employeeID: String(employeeNumber),
+                boardroomID: roomID,
+                date: selectedDateInt
+            )
+
+            bookingMessage = "Booked successfully"
+            await onBooked()
+        } catch {
+            bookingError = error.localizedDescription
+        }
     }
 }
 
 #Preview {
     RoomDetailView(room: nil)
 }
+
