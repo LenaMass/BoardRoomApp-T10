@@ -130,8 +130,8 @@ enum BoardroomsAPI {
         on date: Date
     ) -> Bool {
         guard let roomID = boardroomRecordID(for: roomTitle, in: boardrooms) else { return false }
-        let target = dateInt(from: date)
-        return bookings.contains { $0.fields.boardroomID == roomID && $0.fields.date == target }
+        let di = dateInt(from: date)
+        return bookings.contains { $0.fields.boardroomID == roomID && $0.fields.date == di }
     }
 
     private static func loadToken() throws -> String {

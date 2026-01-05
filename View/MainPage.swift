@@ -45,6 +45,8 @@ struct BoardRoomsView: View {
         let weekDay: String
     }
 
+    @AppStorage("myBookingIDs") private var myBookingIDsJSON: String = "[]"
+
     @State private var boardrooms: [BoardroomRecord] = []
     @State private var selectedDayIndex: Int = 0
     @State private var bookings: [BookingData] = []
@@ -54,12 +56,6 @@ struct BoardRoomsView: View {
     private var monthTitle: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM"
-        return formatter.string(from: Date())
-    }
-
-    private var todayTagText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d MMMM"
         return formatter.string(from: Date())
     }
 
@@ -77,11 +73,7 @@ struct BoardRoomsView: View {
 
         return range.compactMap { day in
             guard let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) else { return nil }
-            return DayModel(
-                date: date,
-                day: formatterDay.string(from: date),
-                weekDay: formatterWeekday.string(from: date)
-            )
+            return DayModel(date: date, day: formatterDay.string(from: date), weekDay: formatterWeekday.string(from: date))
         }
     }
 
@@ -98,15 +90,45 @@ struct BoardRoomsView: View {
         return days[selectedDayIndex].date
     }
 
-    private let myRoom = RoomInfo(
-        title: "Creative Space",
-        floor: "Floor 5",
-        people: "1",
-        imageName: "room1",
-        imageURL: nil,
-        features: [.wifi],
-        description: "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-    )
+    private var apiRooms: [RoomInfo] {
+        boardrooms.compactMap { rec in
+            guard let f = rec.fields else { return nil }
+            let title = f.name ?? ""
+            if title.isEmpty { return nil }
+
+            let floor = "Floor \(f.floorNo ?? 0)"
+            let people = "\(f.seatNo ?? 0)"
+            let desc = f.description ?? ""
+            let imgURL = f.imageURL
+            let features = mapFacilitiesToFeatures(f.facilities ?? [])
+
+            return RoomInfo(
+                title: title,
+                floor: floor,
+                people: people,
+                imageName: "room1",
+                imageURL: imgURL,
+                features: features,
+                description: desc
+            )
+        }
+    }
+
+    private var myBookingIDs: Set<String> {
+        (try? Set(JSONDecoder().decode([String].self, from: Data(myBookingIDsJSON.utf8)))) ?? []
+    }
+
+    private var myBookings: [BookingData] {
+        bookings.filter { myBookingIDs.contains($0.id) }
+    }
+
+    private var nextMyBooking: BookingData? {
+        let todayInt = BoardroomsAPI.dateInt(from: Date())
+        return myBookings
+            .filter { $0.fields.date >= todayInt }
+            .sorted { $0.fields.date < $1.fields.date }
+            .first
+    }
 
     var body: some View {
         NavigationStack {
@@ -120,28 +142,47 @@ struct BoardRoomsView: View {
                         HStack {
                             Text("My booking")
                                 .font(.headline)
+
                             Spacer()
-                            Text("See All")
-                                .foregroundColor(Color.OR_1)
+
+                            NavigationLink {
+                                BookingView(
+                                    bookings: myBookings,
+                                    boardrooms: boardrooms
+                                )
+                            } label: {
+                                Text("See All")
+                                    .foregroundColor(Color.OR_1)
+                            }
+                            .buttonStyle(.plain)
                         }
 
-                        NavigationLink {
-                            RoomDetailView(room: myRoom, initialDate: Date()) {
-                                await fetchData()
+                        if let b = nextMyBooking,
+                           let bookedDate = dateFromInt(b.fields.date),
+                           let room = roomInfo(for: b) {
+
+                            NavigationLink {
+                                RoomDetailView(room: room, initialDate: bookedDate) {
+                                    await fetchData()
+                                }
+                            } label: {
+                                RoomCard(
+                                    title: room.title,
+                                    floor: room.floor,
+                                    people: room.people,
+                                    tag: .date(shortDateText(from: bookedDate)),
+                                    imageName: room.imageName,
+                                    imageURL: room.imageURL,
+                                    features: room.features
+                                )
+                                .frame(height: 122)
                             }
-                        } label: {
-                            RoomCard(
-                                title: myRoom.title,
-                                floor: myRoom.floor,
-                                people: myRoom.people,
-                                tag: .date(todayTagText),
-                                imageName: myRoom.imageName,
-                                imageURL: myRoom.imageURL,
-                                features: myRoom.features
-                            )
-                            .frame(height: 122)
+                            .buttonStyle(.plain)
+
+                        } else {
+                            EmptyMyBookingCard()
+                                .frame(height: 122)
                         }
-                        .buttonStyle(.plain)
                     }
 
                     VStack(alignment: .leading, spacing: 16) {
@@ -155,7 +196,15 @@ struct BoardRoomsView: View {
                             if isLoadingBookings {
                                 ProgressView()
                             } else {
-                                Text("Bookings: \(bookings.count)")
+                                let cal = Calendar.current
+                                let y = cal.component(.year, from: Date())
+                                let m = cal.component(.month, from: Date())
+                                let thisMonthCount = bookings.filter {
+                                    $0.fields.date / 10000 == y &&
+                                    ($0.fields.date / 100) % 100 == m
+                                }.count
+
+                                Text("Bookings this month: \(thisMonthCount)")
                                     .font(.caption)
                                     .foregroundColor(.gray)
                             }
@@ -171,15 +220,8 @@ struct BoardRoomsView: View {
                             HStack(spacing: 18) {
                                 ForEach(days.indices, id: \.self) { index in
                                     let d = days[index]
-
-                                    Button {
-                                        selectedDayIndex = index
-                                    } label: {
-                                        DayChip(
-                                            day: d.day,
-                                            weekDay: d.weekDay,
-                                            isSelected: selectedDayIndex == index
-                                        )
+                                    Button { selectedDayIndex = index } label: {
+                                        DayChip(day: d.day, weekDay: d.weekDay, isSelected: selectedDayIndex == index)
                                     }
                                 }
                             }
@@ -235,28 +277,40 @@ struct BoardRoomsView: View {
         }
     }
 
-    private var apiRooms: [RoomInfo] {
-        boardrooms.compactMap { rec in
-            guard let f = rec.fields else { return nil }
-            let title = f.name ?? ""
-            if title.isEmpty { return nil }
+    private func roomInfo(for booking: BookingData) -> RoomInfo? {
+        guard let rec = boardrooms.first(where: { $0.id == booking.fields.boardroomID }),
+              let f = rec.fields,
+              let title = f.name,
+              !title.isEmpty else { return nil }
 
-            let floor = "Floor \(f.floorNo ?? 0)"
-            let people = "\(f.seatNo ?? 0)"
-            let desc = f.description ?? ""
-            let imgURL = f.imageURL
-            let features = mapFacilitiesToFeatures(f.facilities ?? [])
+        let floor = "Floor \(f.floorNo ?? 0)"
+        let people = "\(f.seatNo ?? 0)"
+        let desc = f.description ?? ""
+        let imgURL = f.imageURL
+        let features = mapFacilitiesToFeatures(f.facilities ?? [])
 
-            return RoomInfo(
-                title: title,
-                floor: floor,
-                people: people,
-                imageName: "room1",
-                imageURL: imgURL,
-                features: features,
-                description: desc
-            )
-        }
+        return RoomInfo(
+            title: title,
+            floor: floor,
+            people: people,
+            imageName: "room1",
+            imageURL: imgURL,
+            features: features,
+            description: desc
+        )
+    }
+
+    private func dateFromInt(_ di: Int) -> Date? {
+        let y = di / 10000
+        let m = (di / 100) % 100
+        let d = di % 100
+        return Calendar.current.date(from: DateComponents(year: y, month: m, day: d))
+    }
+
+    private func shortDateText(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM"
+        return formatter.string(from: date)
     }
 
     private func mapFacilitiesToFeatures(_ facilities: [String]) -> [RoomFeature] {
@@ -286,224 +340,24 @@ struct BoardRoomsView: View {
     }
 }
 
-struct BannerView: View {
+struct EmptyMyBookingCard: View {
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.OR_1)
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.06), radius: 6)
 
-            Circle()
-                .fill(Color.blueButton)
-                .frame(width: 75, height: 70)
-                .offset(x: -169, y: 77)
+            VStack(spacing: 6) {
+                Text("No bookings made yet")
+                    .font(.headline)
+                    .foregroundColor(.black)
 
-            Image("Group 8777")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 100, height: 110)
-                .offset(x: 128, y: -27)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("All board rooms")
-                        .foregroundColor(.white.opacity(0.9))
-                        .font(.system(size: 15))
-
-                    Text("Available today")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundColor(.white)
-                }
-
-                Spacer()
-
-                VStack {
-                    Spacer()
-                    Button(action: {}) {
-                        HStack(spacing: 8) {
-                            Text("Book now")
-                                .foregroundColor(.white)
-
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 40, height: 50)
-                                .overlay(
-                                    Image(systemName: "arrow.right")
-                                        .font(.system(size: 27, weight: .bold))
-                                        .foregroundColor(Color.OR_1)
-                                )
-                        }
-                    }
-                }
-                .frame(maxHeight: .infinity, alignment: .bottomTrailing)
-                .padding(.trailing, 22)
-                .padding(.bottom, 12)
-            }
-            .padding(.horizontal, 22)
-        }
-        .frame(width: 358, height: 138)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-    }
-}
-
-struct DayChip: View {
-    let day: String
-    let weekDay: String
-    var isSelected: Bool
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(weekDay)
-                .font(.caption2)
-                .foregroundColor(.gray)
-
-            Text(day)
-                .font(.headline)
-                .foregroundColor(isSelected ? .white : .black)
-                .frame(width: 40, height: 40)
-                .background(
-                    Circle()
-                        .fill(isSelected ? Color.OR_1 : .clear)
-                        .overlay(
-                            Circle()
-                                .stroke(.gray.opacity(isSelected ? 0 : 0.3), lineWidth: 1)
-                        )
-                )
-        }
-    }
-}
-
-struct RoomCard: View {
-
-    enum Status {
-        case available
-        case unavailable
-
-        var title: String {
-            switch self {
-            case .available:   return "Available"
-            case .unavailable: return "Unavailable"
-            }
-        }
-
-        var bg: Color {
-            switch self {
-            case .available:   return .green.opacity(0.18)
-            case .unavailable: return .red.opacity(0.18)
-            }
-        }
-
-        var fg: Color {
-            switch self {
-            case .available:   return .green
-            case .unavailable: return .red
-            }
-        }
-    }
-
-    enum Tag {
-        case date(String)
-        case status(Status)
-    }
-
-    var title: String
-    var floor: String
-    var people: String
-    var tag: Tag?
-    var imageName: String
-    var imageURL: String?
-    var features: [RoomFeature] = []
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-
-            HStack(spacing: 12) {
-
-                RoomCardImage(imageName: imageName, imageURL: imageURL)
-                    .frame(width: 106, height: 106)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                VStack(alignment: .leading, spacing: 6) {
-
-                    Text(title)
-                        .font(.headline)
-
-                    Text(floor)
-                        .foregroundColor(.gray)
-                        .font(.subheadline)
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "person.2.fill")
-                        Text(people)
-                    }
-                    .foregroundColor(.red)
-                    .font(.caption2)
-
-                    HStack(spacing: 10) {
-                        ForEach(features, id: \.self) { feature in
-                            Image(systemName: feature.systemImageName)
-                        }
-                    }
+                Text("Book a room and it will appear here.")
+                    .font(.caption)
                     .foregroundColor(.gray)
-                    .font(.caption2)
-                }
-
-                Spacer()
             }
-            .padding(12)
-            .background(Color.white)
-            .cornerRadius(16)
-            .shadow(color: .black.opacity(0.06), radius: 6)
-
-            if let tag = tag {
-                switch tag {
-                case .date(let txt):
-                    Text(txt)
-                        .font(.caption)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.blueButton)
-                        .foregroundColor(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .padding(8)
-
-                case .status(let s):
-                    Text(s.title)
-                        .font(.caption)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(s.bg)
-                        .foregroundColor(s.fg)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .padding(8)
-                }
-            }
+            .padding(.horizontal, 16)
         }
     }
-}
-
-struct RoomCardImage: View {
-    let imageName: String
-    let imageURL: String?
-
-    var body: some View {
-        if let imageURL, let url = URL(string: imageURL) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().scaledToFill()
-                default:
-                    Image(imageName).resizable().scaledToFill()
-                }
-            }
-        } else {
-            Image(imageName)
-                .resizable()
-                .scaledToFill()
-        }
-    }
-}
-
-#Preview {
-    BoardRoomsView()
 }
 

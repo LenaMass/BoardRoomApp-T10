@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RoomDetailView: View {
-    let room: RoomInfo?
+    let room: RoomInfo
     let initialDate: Date
     let onBooked: () async -> Void
 
@@ -12,14 +12,14 @@ struct RoomDetailView: View {
         let weekDay: String
     }
 
-    @AppStorage("employeeNumber") private var employeeNumber: Int = 0
+    @AppStorage("myBookingIDs") private var myBookingIDsJSON: String = "[]"
 
     @State private var selectedDayIndex = 0
     @State private var isBooking = false
     @State private var bookingMessage = ""
     @State private var bookingError = ""
 
-    init(room: RoomInfo?, initialDate: Date = Date(), onBooked: @escaping () async -> Void = {}) {
+    init(room: RoomInfo, initialDate: Date = Date(), onBooked: @escaping () async -> Void = {}) {
         self.room = room
         self.initialDate = initialDate
         self.onBooked = onBooked
@@ -44,11 +44,7 @@ struct RoomDetailView: View {
 
         return range.compactMap { day in
             guard let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) else { return nil }
-            return DayModel(
-                date: date,
-                day: formatterDay.string(from: date),
-                weekDay: formatterWeekday.string(from: date)
-            )
+            return DayModel(date: date, day: formatterDay.string(from: date), weekDay: formatterWeekday.string(from: date))
         }
     }
 
@@ -65,36 +61,28 @@ struct RoomDetailView: View {
     }
 
     private var selectedDateInt: Int {
-        let cal = Calendar.current
-        let y = cal.component(.year, from: selectedDate)
-        let m = cal.component(.month, from: selectedDate)
-        let d = cal.component(.day, from: selectedDate)
-        return (y * 10000) + (m * 100) + d
+        BoardroomsAPI.dateInt(from: selectedDate)
     }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
 
-                if let urlString = room?.imageURL,
+                if let urlString = room.imageURL,
                    let url = URL(string: urlString),
                    !urlString.isEmpty {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
+                            image.resizable().scaledToFill()
                         default:
-                            Image(room?.imageName ?? "")
-                                .resizable()
-                                .scaledToFill()
+                            Image(room.imageName).resizable().scaledToFill()
                         }
                     }
                     .frame(height: 260)
                     .clipped()
                 } else {
-                    Image(room?.imageName ?? "")
+                    Image(room.imageName)
                         .resizable()
                         .scaledToFill()
                         .frame(height: 260)
@@ -104,7 +92,7 @@ struct RoomDetailView: View {
                 HStack {
                     HStack(spacing: 6) {
                         Image(systemName: "location")
-                        Text(room?.floor ?? "")
+                        Text(room.floor)
                     }
                     .font(.subheadline)
                     .foregroundColor(.gray)
@@ -113,7 +101,7 @@ struct RoomDetailView: View {
 
                     HStack(spacing: 6) {
                         Image(systemName: "person.2.fill")
-                        Text(room?.people ?? "")
+                        Text(room.people)
                     }
                     .font(.caption2)
                     .padding(.horizontal, 10)
@@ -127,7 +115,7 @@ struct RoomDetailView: View {
                     Text("Description")
                         .font(.headline)
 
-                    Text(room?.description ?? "")
+                    Text(room.description)
                         .font(.subheadline)
                         .foregroundColor(.gray)
                         .padding(12)
@@ -141,7 +129,7 @@ struct RoomDetailView: View {
                         .font(.headline)
 
                     HStack(spacing: 12) {
-                        ForEach(room?.features ?? [], id: \.self) { feature in
+                        ForEach(room.features, id: \.self) { feature in
                             HStack(spacing: 6) {
                                 Image(systemName: feature.systemImageName)
                                 Text(feature.label)
@@ -164,14 +152,8 @@ struct RoomDetailView: View {
                         HStack(spacing: 18) {
                             ForEach(days.indices, id: \.self) { index in
                                 let d = days[index]
-                                Button {
-                                    selectedDayIndex = index
-                                } label: {
-                                    DayChip(
-                                        day: d.day,
-                                        weekDay: d.weekDay,
-                                        isSelected: selectedDayIndex == index
-                                    )
+                                Button { selectedDayIndex = index } label: {
+                                    DayChip(day: d.day, weekDay: d.weekDay, isSelected: selectedDayIndex == index)
                                 }
                             }
                         }
@@ -194,17 +176,15 @@ struct RoomDetailView: View {
                 }
 
                 Button {
-                    Task { await bookRoom() }
+                    Task { await bookRoomForSelectedDay() }
                 } label: {
-                    ZStack {
-                        Text(isBooking ? "Booking..." : "Booking")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.OR_1)
-                    .cornerRadius(12)
+                    Text(isBooking ? "Booking..." : "Booking")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.OR_1)
+                        .cornerRadius(12)
                 }
                 .disabled(isBooking)
                 .padding(.horizontal, 16)
@@ -213,7 +193,7 @@ struct RoomDetailView: View {
                 Spacer(minLength: 60)
             }
         }
-        .navigationTitle(room?.title ?? "")
+        .navigationTitle(room.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.blueButton, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -224,19 +204,9 @@ struct RoomDetailView: View {
     }
 
     @MainActor
-    private func bookRoom() async {
+    private func bookRoomForSelectedDay() async {
         bookingError = ""
         bookingMessage = ""
-
-        guard let roomTitle = room?.title, !roomTitle.isEmpty else {
-            bookingError = "Room not found"
-            return
-        }
-
-        if employeeNumber == 0 {
-            bookingError = "Employee number not found"
-            return
-        }
 
         isBooking = true
         defer { isBooking = false }
@@ -244,7 +214,7 @@ struct RoomDetailView: View {
         do {
             let data = try await BoardroomsAPI.fetchData()
 
-            guard let roomID = BoardroomsAPI.boardroomRecordID(for: roomTitle, in: data.boardrooms) else {
+            guard let roomID = BoardroomsAPI.boardroomRecordID(for: room.title, in: data.boardrooms) else {
                 bookingError = "Room id not found in Airtable"
                 return
             }
@@ -258,12 +228,13 @@ struct RoomDetailView: View {
                 return
             }
 
-            _ = try await BookingData.createBooking(
+            let created = try await BookingData.createBooking(
                 status: "Confirmed",
-                employeeID: String(employeeNumber),
                 boardroomID: roomID,
                 date: selectedDateInt
             )
+
+            saveMyBookingID(created.id)
 
             bookingMessage = "Booked successfully"
             await onBooked()
@@ -271,9 +242,15 @@ struct RoomDetailView: View {
             bookingError = error.localizedDescription
         }
     }
-}
 
-#Preview {
-    RoomDetailView(room: nil)
+    private func saveMyBookingID(_ id: String) {
+        var ids = (try? JSONDecoder().decode([String].self, from: Data(myBookingIDsJSON.utf8))) ?? []
+        if ids.contains(id) { return }
+        ids.append(id)
+        if let data = try? JSONEncoder().encode(ids),
+           let str = String(data: data, encoding: .utf8) {
+            myBookingIDsJSON = str
+        }
+    }
 }
 

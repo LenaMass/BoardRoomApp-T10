@@ -1,196 +1,125 @@
-//import SwiftUI
-//
-//struct BookingsAPITesterView: View {
-//    @State private var bookings: [BookingData] = []
-//    @State private var statusMessage: String = "Ready"
-//    @State private var isLoading = false
-//
-//    @State private var employeeIDInput: String = "recAngCB07LnodYvM"
-//    @State private var boardroomIDInput: String = "rec4djvla4KsEXivl"
-//    @State private var dateInput: String = "1737954445"
-//    @State private var statusInput: String = "Confirmed"
-//
-//    @State private var selectedBookingID: String = ""
-//
-//    var body: some View {
-//        NavigationStack {
-//            VStack(spacing: 12) {
-//
-//                Text(statusMessage)
-//                    .font(.caption)
-//                    .frame(maxWidth: .infinity, alignment: .leading)
-//
-//                if isLoading {
-//                    ProgressView()
-//                        .frame(maxWidth: .infinity, alignment: .leading)
-//                }
-//
-//                Form {
-//                    Section("Create (POST)") {
-//                        TextField("employee_id", text: $employeeIDInput)
-//                            .textInputAutocapitalization(.never)
-//                        TextField("boardroom_id", text: $boardroomIDInput)
-//                            .textInputAutocapitalization(.never)
-//                        TextField("date (unix int)", text: $dateInput)
-//                            .keyboardType(.numberPad)
-//                        TextField("status", text: $statusInput)
-//
-//                        Button("POST Create Booking") {
-//                            Task { await postBooking() }
-//                        }
-//                    }
-//
-//                    Section("Select a booking") {
-//                        TextField("selected booking record id", text: $selectedBookingID)
-//                            .textInputAutocapitalization(.never)
-//                            .font(.caption)
-//
-//                        if selectedBookingID.isEmpty, let first = bookings.first?.id {
-//                            Button("Use first booking id") {
-//                                selectedBookingID = first
-//                            }
-//                        }
-//                    }
-//
-//                    Section("Update (PATCH)") {
-//                        Button("PATCH Update Status → Confirmed") {
-//                            Task { await patchStatus("Confirmed") }
-//                        }
-//                        Button("PATCH Update Status → Cancelled") {
-//                            Task { await patchStatus("Cancelled") }
-//                        }
-//                    }
-//
-//                    Section("Delete (DELETE)") {
-//                        Button(role: .destructive) {
-//                            Task { await deleteSelected() }
-//                        } label: {
-//                            Text("DELETE Selected Booking")
-//                        }
-//                    }
-//                }
-//
-//                List(bookings) { b in
-//                    Button {
-//                        selectedBookingID = b.id
-//                    } label: {
-//                        VStack(alignment: .leading, spacing: 6) {
-//                            Text(b.fields.status ?? "Unknown")
-//                                .font(.headline)
-//                            Text("id: \(b.id)")
-//                                .font(.caption2)
-//                                .foregroundStyle(.secondary)
-//                            Text("employee: \(b.fields.employeeID)")
-//                                .font(.caption2)
-//                                .foregroundStyle(.secondary)
-//                            Text("room: \(b.fields.boardroomID)")
-//                                .font(.caption2)
-//                                .foregroundStyle(.secondary)
-//                            Text("date: \(b.fields.date)")
-//                                .font(.caption2)
-//                                .foregroundStyle(.secondary)
-//                        }
-//                    }
-//                }
-//            }
-//            .navigationTitle("Bookings API Tester")
-//            .toolbar {
-//                Button("GET Refresh") {
-//                    Task { await fetch() }
-//                }
-//            }
-//            .task { await fetch() }
-//        }
-//    }
-//
-//    @MainActor
-//    private func fetch() async {
-//        isLoading = true
-//        statusMessage = "Loading..."
-//        defer { isLoading = false }
-//
-//        do {
-//            bookings = try await BookingData.getAllBookings()
-//            statusMessage = "GET ✅ \(bookings.count) bookings"
-//            if selectedBookingID.isEmpty {
-//                selectedBookingID = bookings.first?.id ?? ""
-//            }
-//        } catch {
-//            statusMessage = "GET ❌ \(error)"
-//        }
-//    }
-//
-//    @MainActor
-//    private func postBooking() async {
-//        isLoading = true
-//        statusMessage = "Posting..."
-//        defer { isLoading = false }
-//
-//        guard let date = Int(dateInput.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-//            statusMessage = "POST ❌ date must be an Int"
-//            return
-//        }
-//
-//        do {
-//            let created = try await BookingData.createBooking(
-//                status: statusInput,
-//                employeeID: employeeIDInput,
-//                boardroomID: boardroomIDInput,
-//                date: date
-//            )
-//            statusMessage = "POST ✅ created \(created.id)"
-//            await fetch()
-//        } catch {
-//            statusMessage = "POST ❌ \(error)"
-//        }
-//    }
-//
-//    @MainActor
-//    private func patchStatus(_ newStatus: String) async {
-//        isLoading = true
-//        statusMessage = "Updating..."
-//        defer { isLoading = false }
-//
-//        guard !selectedBookingID.isEmpty else {
-//            statusMessage = "PATCH ❌ select a booking id"
-//            return
-//        }
-//
-//        do {
-//            _ = try await BookingData.updateBooking(
-//                id: selectedBookingID,
-//                status: newStatus
-//            )
-//            statusMessage = "PATCH ✅ updated \(selectedBookingID)"
-//            await fetch()
-//        } catch {
-//            statusMessage = "PATCH ❌ \(error)"
-//        }
-//    }
-//
-//    @MainActor
-//    private func deleteSelected() async {
-//        isLoading = true
-//        statusMessage = "Deleting..."
-//        defer { isLoading = false }
-//
-//        guard !selectedBookingID.isEmpty else {
-//            statusMessage = "DELETE ❌ select a booking id"
-//            return
-//        }
-//
-//        do {
-//            let ok = try await BookingData.deleteBooking(id: selectedBookingID)
-//            statusMessage = ok ? "DELETE ✅ deleted \(selectedBookingID)" : "DELETE ❌ not deleted"
-//            selectedBookingID = ""
-//            await fetch()
-//        } catch {
-//            statusMessage = "DELETE ❌ \(error)"
-//        }
-//    }
-//}
-//
-//#Preview {
-//    BookingsAPITesterView()
-//}
-//
+
+import SwiftUI
+
+struct BookingView: View {
+    let bookings: [BookingData]
+    let boardrooms: [BoardroomRecord]
+    let onRefresh: () async -> Void
+
+    init(bookings: [BookingData], boardrooms: [BoardroomRecord], onRefresh: @escaping () async -> Void = {}) {
+        self.bookings = bookings
+        self.boardrooms = boardrooms
+        self.onRefresh = onRefresh
+    }
+
+    private var sortedBookings: [BookingData] {
+        bookings.sorted { $0.fields.date < $1.fields.date }
+    }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 12) {
+
+                if sortedBookings.isEmpty {
+                    EmptyState()
+                        .padding(.top, 40)
+                } else {
+                    ForEach(sortedBookings) { b in
+                        if let date = dateFromInt(b.fields.date),
+                           let room = roomInfo(for: b) {
+
+                            NavigationLink {
+                                RoomDetailView(room: room, initialDate: date) {
+                                    await onRefresh()
+                                }
+                            } label: {
+                                RoomCard(
+                                    title: room.title,
+                                    floor: room.floor,
+                                    people: room.people,
+                                    tag: .date(shortDateText(from: date)),
+                                    imageName: room.imageName,
+                                    imageURL: room.imageURL,
+                                    features: room.features
+                                )
+                                .frame(height: 122)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
+        }
+        .navigationTitle("Bookings")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func roomInfo(for booking: BookingData) -> RoomInfo? {
+        guard let rec = boardrooms.first(where: { $0.id == booking.fields.boardroomID }),
+              let f = rec.fields,
+              let title = f.name,
+              !title.isEmpty
+        else { return nil }
+
+        let floor = "Floor \(f.floorNo ?? 0)"
+        let people = "\(f.seatNo ?? 0)"
+        let desc = f.description ?? ""
+        let imgURL = f.imageURL
+        let features = mapFacilitiesToFeatures(f.facilities ?? [])
+
+        return RoomInfo(
+            title: title,
+            floor: floor,
+            people: people,
+            imageName: "room1",
+            imageURL: imgURL,
+            features: features,
+            description: desc
+        )
+    }
+
+    private func dateFromInt(_ di: Int) -> Date? {
+        let y = di / 10000
+        let m = (di / 100) % 100
+        let d = di % 100
+        return Calendar.current.date(from: DateComponents(year: y, month: m, day: d))
+    }
+
+    private func shortDateText(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM"
+        return formatter.string(from: date)
+    }
+
+    private func mapFacilitiesToFeatures(_ facilities: [String]) -> [RoomFeature] {
+        let lower = facilities.map { $0.lowercased() }
+        var out: [RoomFeature] = []
+
+        if lower.contains(where: { $0.contains("wifi") }) { out.append(.wifi) }
+        if lower.contains(where: { $0.contains("screen") || $0.contains("display") || $0.contains("tv") }) { out.append(.screen) }
+        if lower.contains(where: { $0.contains("mic") }) { out.append(.mic) }
+        if lower.contains(where: { $0.contains("control") || $0.contains("controller") }) { out.append(.control) }
+
+        return out
+    }
+}
+
+struct EmptyState: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            Text("No bookings yet")
+                .font(.headline)
+
+            Text("Once you book a room, it will appear here.")
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.06), radius: 6)
+    }
+}

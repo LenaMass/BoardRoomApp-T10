@@ -7,13 +7,11 @@ struct BookingData: Codable, Identifiable {
 
     struct BookingFields: Codable, Hashable {
         let status: String?
-        let employeeID: String
         let boardroomID: String
         let date: Int
 
         enum CodingKeys: String, CodingKey {
             case status
-            case employeeID = "employee_id"
             case boardroomID = "boardroom_id"
             case date
         }
@@ -29,8 +27,8 @@ struct BookingData: Codable, Identifiable {
             switch self {
             case .invalidURL:
                 return "Invalid URL"
-            case .invalidResponse(let status, let message):
-                return "Airtable request failed (\(status)): \(message)"
+            case .invalidResponse(let code, let message):
+                return "Airtable request failed (\(code)): \(message)"
             case .invalidData:
                 return "Invalid response data"
             case .missingAPIToken:
@@ -80,9 +78,7 @@ struct BookingData: Codable, Identifiable {
         components.host = "api.airtable.com"
         components.path = "/v0/appElKqRPusTLsnNe/bookings"
 
-        guard let url = components.url else {
-            throw BookingError.invalidURL
-        }
+        guard let url = components.url else { throw BookingError.invalidURL }
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
@@ -107,7 +103,6 @@ struct BookingData: Codable, Identifiable {
 
     static func createBooking(
         status: String = "Confirmed",
-        employeeID: String,
         boardroomID: String,
         date: Int
     ) async throws -> BookingData {
@@ -118,13 +113,10 @@ struct BookingData: Codable, Identifiable {
         components.host = "api.airtable.com"
         components.path = "/v0/appElKqRPusTLsnNe/bookings"
 
-        guard let url = components.url else {
-            throw BookingError.invalidURL
-        }
+        guard let url = components.url else { throw BookingError.invalidURL }
 
         let fields = BookingFields(
             status: status,
-            employeeID: employeeID,
             boardroomID: boardroomID,
             date: date
         )
@@ -163,7 +155,6 @@ struct BookingData: Codable, Identifiable {
     static func updateBookingPUT(
         id: String,
         status: String,
-        employeeID: String,
         boardroomID: String,
         date: Int
     ) async throws -> BookingData {
@@ -174,13 +165,10 @@ struct BookingData: Codable, Identifiable {
         components.host = "api.airtable.com"
         components.path = "/v0/appElKqRPusTLsnNe/bookings"
 
-        guard let url = components.url else {
-            throw BookingError.invalidURL
-        }
+        guard let url = components.url else { throw BookingError.invalidURL }
 
         let fields = BookingFields(
             status: status,
-            employeeID: employeeID,
             boardroomID: boardroomID,
             date: date
         )
@@ -225,9 +213,7 @@ struct BookingData: Codable, Identifiable {
         components.path = "/v0/appElKqRPusTLsnNe/bookings"
         components.queryItems = [URLQueryItem(name: "records[]", value: id)]
 
-        guard let url = components.url else {
-            throw BookingError.invalidURL
-        }
+        guard let url = components.url else { throw BookingError.invalidURL }
 
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
