@@ -1,125 +1,76 @@
-
 import SwiftUI
 
 struct BookingView: View {
+
     let bookings: [BookingData]
     let boardrooms: [BoardroomRecord]
-    let onRefresh: () async -> Void
 
-    init(bookings: [BookingData], boardrooms: [BoardroomRecord], onRefresh: @escaping () async -> Void = {}) {
-        self.bookings = bookings
-        self.boardrooms = boardrooms
-        self.onRefresh = onRefresh
-    }
+    private var displayBookings: [(booking: BookingData, room: RoomInfo, dateText: String)] {
+        bookings.compactMap { booking in
+            guard
+                let dateInt = booking.fields.date,
+                let boardroomID = booking.fields.boardroomID,
+                let rec = boardrooms.first(where: { $0.id == boardroomID }),
+                let f = rec.fields,
+                let title = f.name
+            else { return nil }
 
-    private var sortedBookings: [BookingData] {
-        bookings.sorted { $0.fields.date < $1.fields.date }
+            let room = RoomInfo(
+                title: title,
+                floor: "Floor \(f.floorNo ?? 0)",
+                people: "\(f.seatNo ?? 0)",
+                imageName: "room1",
+                imageURL: f.imageURL,
+                features: mapFacilitiesToFeatures(f.facilities ?? []),
+                description: f.description ?? ""
+            )
+
+            return (
+                booking: booking,
+                room: room,
+                dateText: BoardroomsAPI.shortDateText(from: dateInt)
+            )
+        }
+        .sorted { ($0.booking.fields.date ?? 0) < ($1.booking.fields.date ?? 0) }
     }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
 
-                if sortedBookings.isEmpty {
-                    EmptyState()
-                        .padding(.top, 40)
+                if displayBookings.isEmpty {
+                    EmptyMyBookingCard()
+                        .frame(height: 140)
+                        .padding(.top, 16)
                 } else {
-                    ForEach(sortedBookings) { b in
-                        if let date = dateFromInt(b.fields.date),
-                           let room = roomInfo(for: b) {
-
-                            NavigationLink {
-                                RoomDetailView(room: room, initialDate: date) {
-                                    await onRefresh()
-                                }
-                            } label: {
-                                RoomCard(
-                                    title: room.title,
-                                    floor: room.floor,
-                                    people: room.people,
-                                    tag: .date(shortDateText(from: date)),
-                                    imageName: room.imageName,
-                                    imageURL: room.imageURL,
-                                    features: room.features
-                                )
-                                .frame(height: 122)
-                            }
-                            .buttonStyle(.plain)
-                        }
+                    ForEach(displayBookings, id: \.booking.id) { item in
+                        RoomCard(
+                            title: item.room.title,
+                            floor: item.room.floor,
+                            people: item.room.people,
+                            tag: .date(item.dateText),
+                            imageName: item.room.imageName,
+                            imageURL: item.room.imageURL,
+                            features: item.room.features
+                        )
                     }
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 20)
+            .padding(.vertical, 12)
         }
-        .navigationTitle("Bookings")
+        .navigationTitle("My Bookings")
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func roomInfo(for booking: BookingData) -> RoomInfo? {
-        guard let rec = boardrooms.first(where: { $0.id == booking.fields.boardroomID }),
-              let f = rec.fields,
-              let title = f.name,
-              !title.isEmpty
-        else { return nil }
-
-        let floor = "Floor \(f.floorNo ?? 0)"
-        let people = "\(f.seatNo ?? 0)"
-        let desc = f.description ?? ""
-        let imgURL = f.imageURL
-        let features = mapFacilitiesToFeatures(f.facilities ?? [])
-
-        return RoomInfo(
-            title: title,
-            floor: floor,
-            people: people,
-            imageName: "room1",
-            imageURL: imgURL,
-            features: features,
-            description: desc
-        )
-    }
-
-    private func dateFromInt(_ di: Int) -> Date? {
-        let y = di / 10000
-        let m = (di / 100) % 100
-        let d = di % 100
-        return Calendar.current.date(from: DateComponents(year: y, month: m, day: d))
-    }
-
-    private func shortDateText(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d MMM"
-        return formatter.string(from: date)
     }
 
     private func mapFacilitiesToFeatures(_ facilities: [String]) -> [RoomFeature] {
         let lower = facilities.map { $0.lowercased() }
         var out: [RoomFeature] = []
-
         if lower.contains(where: { $0.contains("wifi") }) { out.append(.wifi) }
-        if lower.contains(where: { $0.contains("screen") || $0.contains("display") || $0.contains("tv") }) { out.append(.screen) }
+        if lower.contains(where: { $0.contains("screen") || $0.contains("display") }) { out.append(.screen) }
         if lower.contains(where: { $0.contains("mic") }) { out.append(.mic) }
-        if lower.contains(where: { $0.contains("control") || $0.contains("controller") }) { out.append(.control) }
-
+        if lower.contains(where: { $0.contains("control") }) { out.append(.control) }
         return out
     }
 }
 
-struct EmptyState: View {
-    var body: some View {
-        VStack(spacing: 10) {
-            Text("No bookings yet")
-                .font(.headline)
-
-            Text("Once you book a room, it will appear here.")
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.06), radius: 6)
-    }
-}

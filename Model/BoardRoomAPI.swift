@@ -115,6 +115,11 @@ enum BoardroomsAPI {
         boardrooms.first { ($0.fields?.name ?? "") == roomTitle }?.id
     }
 
+    static func boardroomName(for roomID: String, in boardrooms: [BoardroomRecord]) -> String? {
+        boardrooms.first { $0.id == roomID }?.fields?.name
+    }
+
+    // ✅ Date helpers
     static func dateInt(from date: Date) -> Int {
         let cal = Calendar.current
         let y = cal.component(.year, from: date)
@@ -123,6 +128,21 @@ enum BoardroomsAPI {
         return (y * 10000) + (m * 100) + d
     }
 
+    static func dateFromInt(_ yyyymmdd: Int) -> Date? {
+        let y = yyyymmdd / 10000
+        let m = (yyyymmdd / 100) % 100
+        let d = yyyymmdd % 100
+        return Calendar.current.date(from: DateComponents(year: y, month: m, day: d))
+    }
+
+    static func shortDateText(from yyyymmdd: Int) -> String {
+        guard let date = dateFromInt(yyyymmdd) else { return "\(yyyymmdd)" }
+        let f = DateFormatter()
+        f.dateFormat = "d MMM"
+        return f.string(from: date)
+    }
+
+    // ✅ Booked per DAY (date-based)
     static func isRoomBooked(
         roomTitle: String,
         bookings: [BookingData],
@@ -130,8 +150,8 @@ enum BoardroomsAPI {
         on date: Date
     ) -> Bool {
         guard let roomID = boardroomRecordID(for: roomTitle, in: boardrooms) else { return false }
-        let di = dateInt(from: date)
-        return bookings.contains { $0.fields.boardroomID == roomID && $0.fields.date == di }
+        let dayInt = dateInt(from: date)
+        return bookings.contains { $0.fields.boardroomID == roomID && $0.fields.date == dayInt }
     }
 
     private static func loadToken() throws -> String {

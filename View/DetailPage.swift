@@ -12,6 +12,7 @@ struct RoomDetailView: View {
         let weekDay: String
     }
 
+    @AppStorage("employeeRecordID") private var employeeID: String = ""
     @AppStorage("myBookingIDs") private var myBookingIDsJSON: String = "[]"
 
     @State private var selectedDayIndex = 0
@@ -208,6 +209,11 @@ struct RoomDetailView: View {
         bookingError = ""
         bookingMessage = ""
 
+        guard !employeeID.isEmpty else {
+            bookingError = "Employee not logged in"
+            return
+        }
+
         isBooking = true
         defer { isBooking = false }
 
@@ -220,7 +226,7 @@ struct RoomDetailView: View {
             }
 
             let alreadyBooked = data.bookings.contains {
-                $0.fields.boardroomID == roomID && $0.fields.date == selectedDateInt
+                ($0.fields.boardroomID ?? "") == roomID && ($0.fields.date ?? 0) == selectedDateInt
             }
 
             if alreadyBooked {
@@ -230,6 +236,7 @@ struct RoomDetailView: View {
 
             let created = try await BookingData.createBooking(
                 status: "Confirmed",
+                employeeID: employeeID,
                 boardroomID: roomID,
                 date: selectedDateInt
             )

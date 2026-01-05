@@ -1,5 +1,41 @@
 import SwiftUI
 
+enum RoomFeature: Hashable {
+    case wifi
+    case screen
+    case mic
+    case control
+
+    var systemImageName: String {
+        switch self {
+        case .wifi:    return "wifi"
+        case .screen:  return "display"
+        case .mic:     return "mic.fill"
+        case .control: return "slider.horizontal.3"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .wifi:    return "Wi-Fi"
+        case .screen:  return "Screen"
+        case .mic:     return "Mic"
+        case .control: return "Control"
+        }
+    }
+}
+
+struct RoomInfo: Identifiable, Hashable {
+    let id = UUID()
+    let title: String
+    let floor: String
+    let people: String
+    let imageName: String
+    let imageURL: String?
+    let features: [RoomFeature]
+    let description: String
+}
+
 struct BannerView: View {
     var body: some View {
         ZStack {
@@ -10,8 +46,53 @@ struct BannerView: View {
                 .fill(Color.blueButton)
                 .frame(width: 75, height: 70)
                 .offset(x: -169, y: 77)
+
+            Image("Group 8777")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 100, height: 110)
+                .offset(x: 128, y: -27)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("All board rooms")
+                        .foregroundColor(.white.opacity(0.9))
+                        .font(.system(size: 15))
+
+                    Text("Available today")
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundColor(.white)
+                }
+
+                Spacer()
+
+                VStack {
+                    Spacer()
+                    Button(action: {}) {
+                        HStack(spacing: 8) {
+                            Text("Book now")
+                                .foregroundColor(.white)
+
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 40, height: 50)
+                                .overlay(
+                                    Image(systemName: "arrow.right")
+                                        .font(.system(size: 27, weight: .bold))
+                                        .foregroundColor(Color.OR_1)
+                                )
+                        }
+                    }
+                }
+                .frame(maxHeight: .infinity, alignment: .bottomTrailing)
+                .padding(.trailing, 22)
+                .padding(.bottom, 12)
+            }
+            .padding(.horizontal, 22)
         }
-        .frame(height: 150)
+        .frame(maxWidth: .infinity)
+        .frame(height: 138)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
 
@@ -38,6 +119,26 @@ struct DayChip: View {
                                 .stroke(.gray.opacity(isSelected ? 0 : 0.3), lineWidth: 1)
                         )
                 )
+        }
+    }
+}
+
+struct EmptyMyBookingCard: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.06), radius: 6)
+
+            VStack(spacing: 8) {
+                Text("No bookings made yet")
+                    .font(.headline)
+
+                Text("Book a room and it will appear here.")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            }
+            .padding(.horizontal, 18)
         }
     }
 }
@@ -169,4 +270,40 @@ struct RoomCardImage: View {
         }
     }
 }
+//
+//struct BookingView: View {
+//    let bookings: [BookingData]
+//    let boardrooms: [BoardroomRecord]
+//
+//    var body: some View {
+//        ScrollView(showsIndicators: false) {
+//            VStack(spacing: 12) {
+//                if bookings.isEmpty {
+//                    EmptyMyBookingCard()
+//                        .frame(height: 140)
+//                        .padding(.top, 12)
+//                } else {
+//                    ForEach(bookings.sorted(by: { $0.fields.date < $1.fields.date })) { b in
+//                        let title = BoardroomsAPI.boardroomName(for: b.fields.boardroomID, in: boardrooms) ?? "Boardroom"
+//                        let dateText = BoardroomsAPI.shortDateText(from: b.fields.date)
+//
+//                        RoomCard(
+//                            title: title,
+//                            floor: "",
+//                            people: "",
+//                            tag: .date(dateText),
+//                            imageName: "room1",
+//                            imageURL: nil,
+//                            features: []
+//                        )
+//                    }
+//                }
+//            }
+//            .padding(.horizontal, 16)
+//            .padding(.vertical, 12)
+//        }
+//        .navigationTitle("My Bookings")
+//        .navigationBarTitleDisplayMode(.inline)
+//    }
+//}
 
