@@ -34,8 +34,6 @@ struct RoomInfo: Identifiable, Hashable {
     let description: String
 }
 
-// MARK: - Main View
-
 struct BoardRoomsView: View {
 
     struct DayModel: Identifiable {
@@ -45,8 +43,6 @@ struct BoardRoomsView: View {
     }
 
     @State private var selectedDayIndex = 0
-  //  @StateObject private var bookingVM = BookingViewModel()
-
     private let days: [DayModel] = [
         .init(day: "16", weekDay: "Thu"),
         .init(day: "19", weekDay: "Sun"),
@@ -101,17 +97,9 @@ struct BoardRoomsView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
 
-                    // MARK: - Banner (نفس التصميم الأصلي)
                     BannerView()
                         .padding(.top, 8)
 
-                    // 🔥 هنا تشتغل الـ API بدون ما تغيّر شكل التصميم
-                    // تقدرِ لاحقًا تستخدمِ bookingVM.records
-                    // عشان تحدّدين إذا الغرفة متاحة أو لا حسب البيانات.
-                    // مثال (مكانه مستقبلاً):
-                    // let hasBookings = !bookingVM.records.isEmpty
-
-                    // MARK: - My Booking
 
                     VStack(spacing: 12) {
                         HStack {
@@ -167,7 +155,6 @@ struct BoardRoomsView: View {
                             ForEach(rooms.indices, id: \.self) { i in
                                 let r = rooms[i]
 
-                                // هنا ممكن تربط حالة الغرفة مع الـ API لاحقاً
                                 let status: RoomCard.Status = (i == 0) ? .available : .unavailable
 
                                 NavigationLink {
@@ -201,8 +188,6 @@ struct BoardRoomsView: View {
         }
     }
 }
-
-// MARK: - Banner View
 
 struct BannerView: View {
     var body: some View {
