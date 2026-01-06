@@ -81,6 +81,17 @@ enum BoardroomsAPIError: Error {
 
 enum BoardroomsAPI {
 
+    static func isRoomBooked(
+        roomTitle: String,
+        bookings: [BookingData],
+        boardrooms: [BoardroomRecord],
+        on date: Date
+    ) -> Bool {
+        let dateInt = dateInt(from: date)
+        guard let roomID = boardroomRecordID(for: roomTitle, in: boardrooms) else { return false }
+        return bookings.contains { ($0.fields.boardroomID ?? "") == roomID && ($0.fields.date ?? -1) == dateInt }
+    }
+
     static func getAllBoardrooms() async throws -> [BoardroomRecord] {
         let apiToken = try loadToken()
 
@@ -115,16 +126,27 @@ enum BoardroomsAPI {
         boardrooms.first { ($0.fields?.name ?? "") == roomTitle }?.id
     }
 
+    static func isRoomBooked(roomTitle: String, bookings: [BookingData], boardrooms: [BoardroomRecord]) -> Bool {
+        guard let roomID = boardroomRecordID(for: roomTitle, in: boardrooms) else { return false }
+        return bookings.contains { $0.fields.boardroomID == roomID }
+    }
+
     static func boardroomName(for roomID: String, in boardrooms: [BoardroomRecord]) -> String? {
         boardrooms.first { $0.id == roomID }?.fields?.name
     }
 
-    // ✅ Date helpers
+    static let gregorianCalendar: Calendar = {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .current
+        return cal
+    }()
+
     static func dateInt(from date: Date) -> Int {
-        let cal = Calendar.current
-        let y = cal.component(.year, from: date)
-        let m = cal.component(.month, from: date)
-        let d = cal.component(.day, from: date)
+        let cal = gregorianCalendar
+        let d0 = cal.startOfDay(for: date)
+        let y = cal.component(.year, from: d0)
+        let m = cal.component(.month, from: d0)
+        let d = cal.component(.day, from: d0)
         return (y * 10000) + (m * 100) + d
     }
 
@@ -132,26 +154,23 @@ enum BoardroomsAPI {
         let y = yyyymmdd / 10000
         let m = (yyyymmdd / 100) % 100
         let d = yyyymmdd % 100
-        return Calendar.current.date(from: DateComponents(year: y, month: m, day: d))
+        return gregorianCalendar.date(from: DateComponents(year: y, month: m, day: d))
     }
 
     static func shortDateText(from yyyymmdd: Int) -> String {
-        guard let date = dateFromInt(yyyymmdd) else { return "\(yyyymmdd)" }
-        let f = DateFormatter()
-        f.dateFormat = "d MMM"
-        return f.string(from: date)
+        guard let date = dateFromInt(yyyymmdd) else { return "" }
+        let formatter = DateFormatter()
+        formatter.calendar = gregorianCalendar
+        formatter.dateFormat = "d MMM"
+        return formatter.string(from: date)
     }
 
-    // ✅ Booked per DAY (date-based)
-    static func isRoomBooked(
-        roomTitle: String,
-        bookings: [BookingData],
-        boardrooms: [BoardroomRecord],
-        on date: Date
-    ) -> Bool {
-        guard let roomID = boardroomRecordID(for: roomTitle, in: boardrooms) else { return false }
-        let dayInt = dateInt(from: date)
-        return bookings.contains { $0.fields.boardroomID == roomID && $0.fields.date == dayInt }
+    static func monthBounds(for date: Date) -> (start: Date, end: Date) {
+        let start = gregorianCalendar.date(from: gregorianCalendar.dateComponents([.year, .month], from: date)) ?? date
+        let range = gregorianCalendar.range(of: .day, in: .month, for: date) ?? 1..<2
+        let days = max(1, range.count)
+        let end = gregorianCalendar.date(byAdding: .day, value: days - 1, to: start) ?? start
+        return (start, end)
     }
 
     private static func loadToken() throws -> String {

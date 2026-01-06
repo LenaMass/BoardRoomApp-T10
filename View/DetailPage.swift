@@ -5,6 +5,8 @@ struct RoomDetailView: View {
     let initialDate: Date
     let onBooked: () async -> Void
 
+    let calendar = BoardroomsAPI.gregorianCalendar
+
     struct DayModel: Identifiable {
         let id = UUID()
         let date: Date
@@ -28,19 +30,21 @@ struct RoomDetailView: View {
 
     private var monthTitle: String {
         let formatter = DateFormatter()
+        formatter.calendar = calendar
         formatter.dateFormat = "MMMM"
         return formatter.string(from: initialDate)
     }
 
     private var days: [DayModel] {
-        let calendar = Calendar.current
         let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: initialDate)) ?? initialDate
         let range = calendar.range(of: .day, in: .month, for: initialDate) ?? 1..<2
 
         let formatterDay = DateFormatter()
+        formatterDay.calendar = calendar
         formatterDay.dateFormat = "d"
 
         let formatterWeekday = DateFormatter()
+        formatterWeekday.calendar = calendar
         formatterWeekday.dateFormat = "EEE"
 
         return range.compactMap { day in
@@ -50,7 +54,6 @@ struct RoomDetailView: View {
     }
 
     private var initialIndexInMonth: Int {
-        let calendar = Calendar.current
         let day = calendar.component(.day, from: initialDate)
         let idx = day - 1
         return max(0, min(idx, days.count - 1))

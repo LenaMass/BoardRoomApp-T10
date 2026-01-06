@@ -9,7 +9,9 @@ struct BoardRoomsView: View {
         let weekDay: String
     }
 
-    @AppStorage("employeeRecordID") private var employeeID: String = ""
+    let calendar = BoardroomsAPI.gregorianCalendar
+
+    @AppStorage("employeeID") private var employeeID: String = ""
 
     @State private var boardrooms: [BoardroomRecord] = []
     @State private var selectedDayIndex: Int = 0
@@ -19,43 +21,43 @@ struct BoardRoomsView: View {
 
     private var monthTitle: String {
         let formatter = DateFormatter()
+        formatter.calendar = calendar
         formatter.dateFormat = "MMMM"
         return formatter.string(from: Date())
     }
 
     private var days: [DayModel] {
-        let calendar = Calendar.current
         let today = Date()
         let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
         let range = calendar.range(of: .day, in: .month, for: today) ?? 1..<2
 
-        let dFormatter = DateFormatter()
-        dFormatter.dateFormat = "d"
+        let formatterDay = DateFormatter()
+        formatterDay.calendar = calendar
+        formatterDay.dateFormat = "d"
 
-        let wFormatter = DateFormatter()
-        wFormatter.dateFormat = "EEE"
+        let formatterWeekday = DateFormatter()
+        formatterWeekday.calendar = calendar
+        formatterWeekday.dateFormat = "EEE"
 
         return range.compactMap { day in
             guard let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) else { return nil }
-            return DayModel(
-                date: date,
-                day: dFormatter.string(from: date),
-                weekDay: wFormatter.string(from: date)
-            )
+            return DayModel(date: date, day: formatterDay.string(from: date), weekDay: formatterWeekday.string(from: date))
         }
     }
 
     private var todayIndexInMonth: Int {
-        max(0, Calendar.current.component(.day, from: Date()) - 1)
+        let day = calendar.component(.day, from: Date())
+        return max(0, min(day - 1, days.count - 1))
     }
 
     private var selectedDate: Date {
-        days.indices.contains(selectedDayIndex) ? days[selectedDayIndex].date : Date()
+        guard days.indices.contains(selectedDayIndex) else { return Date() }
+        return days[selectedDayIndex].date
     }
 
     private var apiRooms: [RoomInfo] {
         boardrooms.compactMap { rec in
-            guard let f = rec.fields, let title = f.name else { return nil }
+            guard let f = rec.fields, let title = f.name, !title.isEmpty else { return nil }
 
             return RoomInfo(
                 title: title,
@@ -69,16 +71,15 @@ struct BoardRoomsView: View {
         }
     }
 
-    private var myBookings: [BookingData] {
+    private var validBookings: [BookingData] {
         bookings.filter {
-            guard
-                let empID = $0.fields.employeeID,
-                let _ = $0.fields.date,
-                let roomID = $0.fields.boardroomID
-            else { return false }
-
-            return empID == employeeID && !roomID.isEmpty
+            ($0.fields.boardroomID ?? "").isEmpty == false &&
+            $0.fields.date != nil
         }
+    }
+
+    private var myBookings: [BookingData] {
+        validBookings.filter { ($0.fields.employeeID ?? "") == employeeID }
     }
 
     private var nextMyBooking: BookingData? {
@@ -94,24 +95,35 @@ struct BoardRoomsView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
 
-                    BannerView().padding(.top, 8)
+                    BannerView()
+                        .padding(.top, 8)
 
                     VStack(spacing: 12) {
                         HStack {
-                            Text("My booking").font(.headline)
+                            Text("My booking")
+                                .font(.headline)
+
                             Spacer()
+
                             NavigationLink {
-                                BookingView(bookings: myBookings, boardrooms: boardrooms)
+                                BookingView(
+                                    bookings: myBookings,
+                                    boardrooms: boardrooms,
+                                    onChanged: {
+                                        await fetchData()
+                                    }
+                                )
                             } label: {
-                                Text("See All").foregroundColor(Color.OR_1)
+                                Text("See All")
+                                    .foregroundColor(Color.OR_1)
                             }
                             .buttonStyle(.plain)
                         }
 
-                        if let booking = nextMyBooking,
-                           let dateInt = booking.fields.date,
+                        if let b = nextMyBooking,
+                           let dateInt = b.fields.date,
                            let bookedDate = BoardroomsAPI.dateFromInt(dateInt),
-                           let room = roomInfo(for: booking) {
+                           let room = roomInfo(for: b) {
 
                             NavigationLink {
                                 RoomDetailView(room: room, initialDate: bookedDate) {
@@ -132,26 +144,27 @@ struct BoardRoomsView: View {
                             .buttonStyle(.plain)
 
                         } else {
-                            EmptyMyBookingCard().frame(height: 122)
+                            EmptyMyBookingCard()
+                                .frame(height: 122)
                         }
                     }
 
                     VStack(alignment: .leading, spacing: 16) {
 
                         HStack {
-                            Text("All bookings for \(monthTitle)").font(.headline)
+                            Text("All bookings for \(monthTitle)")
+                                .font(.headline)
+
                             Spacer()
 
                             if isLoadingBookings {
                                 ProgressView()
                             } else {
-                                let cal = Calendar.current
-                                let y = cal.component(.year, from: Date())
-                                let m = cal.component(.month, from: Date())
-
-                                let count = bookings.filter {
-                                    let d = $0.fields.date ?? 0
-                                    return d / 10000 == y && (d / 100) % 100 == m
+                                let y = calendar.component(.year, from: Date())
+                                let m = calendar.component(.month, from: Date())
+                                let count = validBookings.filter {
+                                    let date = $0.fields.date ?? 0
+                                    return date / 10000 == y && (date / 100) % 100 == m
                                 }.count
 
                                 Text("Bookings this month: \(count)")
@@ -168,37 +181,39 @@ struct BoardRoomsView: View {
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 18) {
-                                ForEach(days.indices, id: \.self) { i in
-                                    let d = days[i]
-                                    Button { selectedDayIndex = i } label: {
-                                        DayChip(day: d.day, weekDay: d.weekDay, isSelected: selectedDayIndex == i)
+                                ForEach(days.indices, id: \.self) { index in
+                                    let d = days[index]
+                                    Button { selectedDayIndex = index } label: {
+                                        DayChip(day: d.day, weekDay: d.weekDay, isSelected: selectedDayIndex == index)
                                     }
                                 }
                             }
                         }
 
                         VStack(spacing: 12) {
-                            ForEach(apiRooms) { room in
+                            ForEach(apiRooms.indices, id: \.self) { i in
+                                let r = apiRooms[i]
+
                                 let unavailable = BoardroomsAPI.isRoomBooked(
-                                    roomTitle: room.title,
-                                    bookings: bookings,
+                                    roomTitle: r.title,
+                                    bookings: validBookings,
                                     boardrooms: boardrooms,
                                     on: selectedDate
                                 )
 
                                 NavigationLink {
-                                    RoomDetailView(room: room, initialDate: selectedDate) {
+                                    RoomDetailView(room: r, initialDate: selectedDate) {
                                         await fetchData()
                                     }
                                 } label: {
                                     RoomCard(
-                                        title: room.title,
-                                        floor: room.floor,
-                                        people: room.people,
+                                        title: r.title,
+                                        floor: r.floor,
+                                        people: r.people,
                                         tag: .status(unavailable ? .unavailable : .available),
-                                        imageName: room.imageName,
-                                        imageURL: room.imageURL,
-                                        features: room.features
+                                        imageName: r.imageName,
+                                        imageURL: r.imageURL,
+                                        features: r.features
                                     )
                                 }
                                 .buttonStyle(.plain)
@@ -215,7 +230,9 @@ struct BoardRoomsView: View {
                 selectedDayIndex = todayIndexInMonth
                 await fetchData()
             }
-            .refreshable { await fetchData() }
+            .refreshable {
+                await fetchData()
+            }
         }
     }
 
@@ -240,9 +257,9 @@ struct BoardRoomsView: View {
         let lower = facilities.map { $0.lowercased() }
         var out: [RoomFeature] = []
         if lower.contains(where: { $0.contains("wifi") }) { out.append(.wifi) }
-        if lower.contains(where: { $0.contains("screen") || $0.contains("display") }) { out.append(.screen) }
+        if lower.contains(where: { $0.contains("screen") || $0.contains("display") || $0.contains("tv") }) { out.append(.screen) }
         if lower.contains(where: { $0.contains("mic") }) { out.append(.mic) }
-        if lower.contains(where: { $0.contains("control") }) { out.append(.control) }
+        if lower.contains(where: { $0.contains("control") || $0.contains("controller") }) { out.append(.control) }
         return out
     }
 

@@ -70,6 +70,14 @@ struct BookingData: Codable, Identifiable {
         }
     }
 
+    private struct UpdateBookingRequest: Codable {
+        let fields: UpdateFields
+    }
+
+    private struct UpdateFields: Codable {
+        let date: Int
+    }
+
     static func getAllBookings() async throws -> [BookingData] {
         let apiToken = try loadToken()
 
@@ -149,6 +157,78 @@ struct BookingData: Codable, Identifiable {
         let decoded = try JSONDecoder().decode(AirtableResponse.self, from: data)
         guard let created = decoded.records.first else { throw BookingError.invalidData }
         return created
+    }
+
+    static func updateBookingDate(
+        bookingID: String,
+        newDate: Int
+    ) async throws -> BookingData {
+
+        let apiToken = try loadToken()
+
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.airtable.com"
+        components.path = "/v0/appElKqRPusTLsnNe/bookings/\(bookingID)"
+
+        guard let url = components.url else { throw BookingError.invalidURL }
+
+        let body = UpdateBookingRequest(fields: UpdateFields(date: newDate))
+        let jsonData = try JSONEncoder().encode(body)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let http = response as? HTTPURLResponse else {
+            throw BookingError.invalidResponse(statusCode: -1, message: "No HTTP response")
+        }
+
+        guard (200...299).contains(http.statusCode) else {
+            throw BookingError.invalidResponse(
+                statusCode: http.statusCode,
+                message: parseAirtableErrorMessage(from: data)
+            )
+        }
+
+        return try JSONDecoder().decode(BookingData.self, from: data)
+    }
+
+    static func deleteBooking(
+        bookingID: String
+    ) async throws {
+
+        let apiToken = try loadToken()
+
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.airtable.com"
+        components.path = "/v0/appElKqRPusTLsnNe/bookings/\(bookingID)"
+
+        guard let url = components.url else { throw BookingError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let http = response as? HTTPURLResponse else {
+            throw BookingError.invalidResponse(statusCode: -1, message: "No HTTP response")
+        }
+
+        guard (200...299).contains(http.statusCode) else {
+            throw BookingError.invalidResponse(
+                statusCode: http.statusCode,
+                message: parseAirtableErrorMessage(from: data)
+            )
+        }
+
+        _ = data
     }
 
     private static func parseAirtableErrorMessage(from data: Data) -> String {
