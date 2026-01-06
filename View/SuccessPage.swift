@@ -1,9 +1,32 @@
 import SwiftUI
+
 struct BookingSuccessView: View {
+    let roomName: String
+    let date: Date
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var messageText: String {
+        let cal = BoardroomsAPI.gregorianCalendar
+
+        let weekday = DateFormatter()
+        weekday.calendar = cal
+        weekday.locale = Locale(identifier: "en_US_POSIX")
+        weekday.timeZone = .current
+        weekday.dateFormat = "EEEE"
+
+        let full = DateFormatter()
+        full.calendar = cal
+        full.locale = Locale(identifier: "en_US_POSIX")
+        full.timeZone = .current
+        full.dateFormat = "MMMM d, yyyy"
+
+        return "Your booking for \(roomName) on \(weekday.string(from: date)),\n\(full.string(from: date)) is confirmed."
+    }
 
     var body: some View {
         ZStack {
-            Color(red: 0.94, green: 0.94, blue: 0.94)
+            Color.screenBG
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -26,7 +49,7 @@ struct BookingSuccessView: View {
                     Text("Booking Success!")
                         .font(.system(size: 32, weight: .bold))
 
-                    Text("Your booking for Ideation Room on Sunday,\nMarch 19, 2023 is confirmed.")
+                    Text(messageText)
                         .font(.system(size: 16))
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
@@ -34,7 +57,7 @@ struct BookingSuccessView: View {
 
                     Spacer()
 
-                    Button(action: {}) {
+                    Button(action: { dismiss() }) {
                         Text("Done")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.white)
@@ -53,6 +76,7 @@ struct BookingSuccessView: View {
     }
 }
 
-#Preview{
-    BookingSuccessView()
+#Preview {
+    BookingSuccessView(roomName: "Ideation Room", date: Date())
 }
+

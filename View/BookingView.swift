@@ -59,89 +59,97 @@ struct BookingView: View {
     }
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 12) {
+        ZStack {
+            Color.screenBG
+                .ignoresSafeArea()
 
-                if !errorText.isEmpty {
-                    Text(errorText)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 8)
-                }
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 12) {
 
-                if displayBookings.isEmpty {
-                    EmptyMyBookingCard()
-                        .frame(height: 140)
-                        .padding(.top, 16)
-                } else {
-                    ForEach(displayBookings, id: \.booking.id) { item in
-                        let booking = item.booking
-                        let dateText = item.dateText
-                        let roomID = item.roomID
+                    if !errorText.isEmpty {
+                        Text(errorText)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 8)
+                    }
 
-                        let roomName = BoardroomsAPI.boardroomName(for: roomID, in: boardrooms) ?? "Boardroom"
-                        let room = boardrooms.first(where: { $0.id == roomID })?.fields
+                    if displayBookings.isEmpty {
+                        EmptyMyBookingCard()
+                            .frame(height: 140)
+                            .padding(.top, 16)
+                    } else {
+                        ForEach(displayBookings, id: \.booking.id) { item in
+                            let booking = item.booking
+                            let dateText = item.dateText
+                            let roomID = item.roomID
 
-                        let floorText = {
-                            if let f = room?.floorNo { return "Floor \(f)" }
-                            return ""
-                        }()
+                            let roomName = BoardroomsAPI.boardroomName(for: roomID, in: boardrooms) ?? "Boardroom"
+                            let room = boardrooms.first(where: { $0.id == roomID })?.fields
 
-                        let peopleText = {
-                            if let s = room?.seatNo { return "\(s)" }
-                            return ""
-                        }()
+                            let floorText = {
+                                if let f = room?.floorNo { return "Floor \(f)" }
+                                return ""
+                            }()
 
-                        VStack(spacing: 10) {
-                            RoomCard(
-                                title: roomName,
-                                floor: floorText,
-                                people: peopleText,
-                                tag: .date(dateText),
-                                imageName: "room1",
-                                imageURL: room?.imageURL,
-                                features: mapFacilitiesToFeatures(room?.facilities ?? [])
-                            )
+                            let peopleText = {
+                                if let s = room?.seatNo { return "\(s)" }
+                                return ""
+                            }()
 
-                            HStack(spacing: 12) {
-                                Button {
-                                    startEdit(booking: booking)
-                                } label: {
-                                    Text("Edit date (PUT)")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 10)
-                                        .background(Color.blueButton)
-                                        .cornerRadius(10)
+                            VStack(spacing: 10) {
+                                RoomCard(
+                                    title: roomName,
+                                    floor: floorText,
+                                    people: peopleText,
+                                    tag: .date(dateText),
+                                    imageName: "room1",
+                                    imageURL: room?.imageURL,
+                                    features: mapFacilitiesToFeatures(room?.facilities ?? [])
+                                )
+
+                                HStack(spacing: 12) {
+                                    Button {
+                                        startEdit(booking: booking)
+                                    } label: {
+                                        Text("Edit date")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 10)
+                                            .background(Color.blueButton)
+                                            .cornerRadius(10)
+                                    }
+                                    .disabled(busyIDs.contains(booking.id))
+
+                                    Button {
+                                        Task { await deleteBooking(booking: booking) }
+                                    } label: {
+                                        Text("Delete")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 10)
+                                            .background(Color.red)
+                                            .cornerRadius(10)
+                                    }
+                                    .disabled(busyIDs.contains(booking.id))
+
+                                    Spacer()
                                 }
-                                .disabled(busyIDs.contains(booking.id))
-
-                                Button {
-                                    Task { await deleteBooking(booking: booking) }
-                                } label: {
-                                    Text("Delete (DEL)")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 10)
-                                        .background(Color.red)
-                                        .cornerRadius(10)
-                                }
-                                .disabled(busyIDs.contains(booking.id))
-
-                                Spacer()
                             }
                         }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
         .navigationTitle("My Bookings")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.blueButton, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .sheet(item: $editingBooking) { b in
             editSheet(for: b)
                 .presentationDetents([.medium])
@@ -162,41 +170,46 @@ struct BookingView: View {
     }
 
     private func editSheet(for booking: BookingData) -> some View {
-        VStack(spacing: 14) {
-            Text("Choose a day in \(monthTitle)")
-                .font(.headline)
-                .padding(.top, 10)
+        ZStack {
+            Color.screenBG
+                .ignoresSafeArea()
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 18) {
-                    ForEach(days.indices, id: \.self) { index in
-                        let d = days[index]
-                        Button {
-                            editDayIndex = index
-                        } label: {
-                            DayChip(day: d.day, weekDay: d.weekDay, isSelected: editDayIndex == index)
+            VStack(spacing: 14) {
+                Text("Choose a day in \(monthTitle)")
+                    .font(.headline)
+                    .padding(.top, 10)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 18) {
+                        ForEach(days.indices, id: \.self) { index in
+                            let d = days[index]
+                            Button {
+                                editDayIndex = index
+                            } label: {
+                                DayChip(day: d.day, weekDay: d.weekDay, isSelected: editDayIndex == index)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 16)
+                }
+
+                Button {
+                    Task { await saveEditedDate(booking: booking) }
+                } label: {
+                    Text("Save")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.OR_1)
+                        .cornerRadius(12)
                 }
                 .padding(.horizontal, 16)
-            }
+                .disabled(busyIDs.contains(booking.id))
 
-            Button {
-                Task { await saveEditedDate(booking: booking) }
-            } label: {
-                Text("Save")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.OR_1)
-                    .cornerRadius(12)
+                Spacer(minLength: 6)
             }
-            .padding(.horizontal, 16)
-            .disabled(busyIDs.contains(booking.id))
-
-            Spacer(minLength: 6)
         }
     }
 

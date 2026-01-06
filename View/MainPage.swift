@@ -58,7 +58,6 @@ struct BoardRoomsView: View {
     private var apiRooms: [RoomInfo] {
         boardrooms.compactMap { rec in
             guard let f = rec.fields, let title = f.name, !title.isEmpty else { return nil }
-
             return RoomInfo(
                 title: title,
                 floor: "Floor \(f.floorNo ?? 0)",
@@ -92,140 +91,148 @@ struct BoardRoomsView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
+            ZStack {
+                Color.screenBG
+                    .ignoresSafeArea()
 
-                    BannerView()
-                        .padding(.top, 8)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 24) {
 
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("My booking")
-                                .font(.headline)
-
-                            Spacer()
-
-                            NavigationLink {
-                                BookingView(
-                                    bookings: myBookings,
-                                    boardrooms: boardrooms,
-                                    onChanged: {
-                                        await fetchData()
-                                    }
-                                )
-                            } label: {
-                                Text("See All")
-                                    .foregroundColor(Color.OR_1)
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        if let b = nextMyBooking,
-                           let dateInt = b.fields.date,
-                           let bookedDate = BoardroomsAPI.dateFromInt(dateInt),
-                           let room = roomInfo(for: b) {
-
-                            NavigationLink {
-                                RoomDetailView(room: room, initialDate: bookedDate) {
-                                    await fetchData()
-                                }
-                            } label: {
-                                RoomCard(
-                                    title: room.title,
-                                    floor: room.floor,
-                                    people: room.people,
-                                    tag: .date(BoardroomsAPI.shortDateText(from: dateInt)),
-                                    imageName: room.imageName,
-                                    imageURL: room.imageURL,
-                                    features: room.features
-                                )
-                                .frame(height: 122)
-                            }
-                            .buttonStyle(.plain)
-
-                        } else {
-                            EmptyMyBookingCard()
-                                .frame(height: 122)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 16) {
-
-                        HStack {
-                            Text("All bookings for \(monthTitle)")
-                                .font(.headline)
-
-                            Spacer()
-
-                            if isLoadingBookings {
-                                ProgressView()
-                            } else {
-                                let y = calendar.component(.year, from: Date())
-                                let m = calendar.component(.month, from: Date())
-                                let count = validBookings.filter {
-                                    let date = $0.fields.date ?? 0
-                                    return date / 10000 == y && (date / 100) % 100 == m
-                                }.count
-
-                                Text("Bookings this month: \(count)")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-
-                        if !bookingsError.isEmpty {
-                            Text(bookingsError)
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 18) {
-                                ForEach(days.indices, id: \.self) { index in
-                                    let d = days[index]
-                                    Button { selectedDayIndex = index } label: {
-                                        DayChip(day: d.day, weekDay: d.weekDay, isSelected: selectedDayIndex == index)
-                                    }
-                                }
-                            }
-                        }
+                        BannerView()
+                            .padding(.top, 8)
 
                         VStack(spacing: 12) {
-                            ForEach(apiRooms.indices, id: \.self) { i in
-                                let r = apiRooms[i]
+                            HStack {
+                                Text("My booking")
+                                    .font(.headline)
 
-                                let unavailable = BoardroomsAPI.isRoomBooked(
-                                    roomTitle: r.title,
-                                    bookings: validBookings,
-                                    boardrooms: boardrooms,
-                                    on: selectedDate
-                                )
+                                Spacer()
 
                                 NavigationLink {
-                                    RoomDetailView(room: r, initialDate: selectedDate) {
+                                    BookingView(
+                                        bookings: myBookings,
+                                        boardrooms: boardrooms,
+                                        onChanged: {
+                                            await fetchData()
+                                        }
+                                    )
+                                } label: {
+                                    Text("See All")
+                                        .foregroundColor(Color.OR_1)
+                                }
+                                .buttonStyle(.plain)
+                            }
+
+                            if let b = nextMyBooking,
+                               let dateInt = b.fields.date,
+                               let bookedDate = BoardroomsAPI.dateFromInt(dateInt),
+                               let room = roomInfo(for: b) {
+
+                                NavigationLink {
+                                    RoomDetailView(room: room, initialDate: bookedDate) {
                                         await fetchData()
                                     }
                                 } label: {
                                     RoomCard(
-                                        title: r.title,
-                                        floor: r.floor,
-                                        people: r.people,
-                                        tag: .status(unavailable ? .unavailable : .available),
-                                        imageName: r.imageName,
-                                        imageURL: r.imageURL,
-                                        features: r.features
+                                        title: room.title,
+                                        floor: room.floor,
+                                        people: room.people,
+                                        tag: .date(BoardroomsAPI.shortDateText(from: dateInt)),
+                                        imageName: room.imageName,
+                                        imageURL: room.imageURL,
+                                        features: room.features
                                     )
+                                    .frame(height: 122)
                                 }
                                 .buttonStyle(.plain)
+
+                            } else {
+                                EmptyMyBookingCard()
+                                    .frame(height: 122)
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 16) {
+
+                            HStack {
+                                Text("All bookings for \(monthTitle)")
+                                    .font(.headline)
+
+                                Spacer()
+
+                                if isLoadingBookings {
+                                    ProgressView()
+                                } else {
+                                    let y = calendar.component(.year, from: Date())
+                                    let m = calendar.component(.month, from: Date())
+                                    let count = validBookings.filter {
+                                        let date = $0.fields.date ?? 0
+                                        return date / 10000 == y && (date / 100) % 100 == m
+                                    }.count
+
+                                    Text("Bookings this month: \(count)")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+
+                            if !bookingsError.isEmpty {
+                                Text(bookingsError)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 18) {
+                                    ForEach(days.indices, id: \.self) { index in
+                                        let d = days[index]
+                                        Button { selectedDayIndex = index } label: {
+                                            DayChip(day: d.day, weekDay: d.weekDay, isSelected: selectedDayIndex == index)
+                                        }
+                                    }
+                                }
+                            }
+
+                            VStack(spacing: 12) {
+                                ForEach(apiRooms.indices, id: \.self) { i in
+                                    let r = apiRooms[i]
+
+                                    let unavailable = BoardroomsAPI.isRoomBooked(
+                                        roomTitle: r.title,
+                                        bookings: validBookings,
+                                        boardrooms: boardrooms,
+                                        on: selectedDate
+                                    )
+
+                                    NavigationLink {
+                                        RoomDetailView(room: r, initialDate: selectedDate) {
+                                            await fetchData()
+                                        }
+                                    } label: {
+                                        RoomCard(
+                                            title: r.title,
+                                            floor: r.floor,
+                                            people: r.people,
+                                            tag: .status(unavailable ? .unavailable : .available),
+                                            imageName: r.imageName,
+                                            imageURL: r.imageURL,
+                                            features: r.features
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
                         }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 20)
             }
             .navigationTitle("Board Rooms")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.blueButton, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .task {
                 selectedDayIndex = todayIndexInMonth
                 await fetchData()
