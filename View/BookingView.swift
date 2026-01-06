@@ -2,6 +2,13 @@ import SwiftUI
 
 struct BookingView: View {
 
+    struct DayModel: Identifiable {
+        let id = UUID()
+        let date: Date
+        let day: String
+        let weekDay: String
+    }
+
     let bookings: [BookingData]
     let boardrooms: [BoardroomRecord]
     let onChanged: (() async -> Void)?
@@ -9,16 +16,44 @@ struct BookingView: View {
     @State private var busyIDs: Set<String> = []
     @State private var errorText: String = ""
 
-    @State private var editingBooking: BookingData? = nil
-    @State private var editingSelectedIndex: Int = 0
+    @State private var editingBooking: BookingData?
+    @State private var editDayIndex: Int = 0
 
-    private var calendar: Calendar { BoardroomsAPI.gregorianCalendar }
+    private var monthTitle: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "MMMM"
+        return f.string(from: Date())
+    }
+
+    private var days: [DayModel] {
+        let cal = BoardroomsAPI.gregorianCalendar
+        let today = Date()
+        let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: today)) ?? today
+        let range = cal.range(of: .day, in: .month, for: today) ?? 1..<2
+
+        let fd = DateFormatter()
+        fd.locale = Locale(identifier: "en_US_POSIX")
+        fd.timeZone = .current
+        fd.dateFormat = "d"
+
+        let fw = DateFormatter()
+        fw.locale = Locale(identifier: "en_US_POSIX")
+        fw.timeZone = .current
+        fw.dateFormat = "EEE"
+
+        return range.compactMap { day in
+            guard let date = cal.date(byAdding: .day, value: day - 1, to: startOfMonth) else { return nil }
+            return DayModel(date: date, day: fd.string(from: date), weekDay: fw.string(from: date))
+        }
+    }
 
     private var displayBookings: [(booking: BookingData, dateInt: Int, dateText: String, roomID: String)] {
         bookings.compactMap { booking in
-            guard let d = booking.fields.date else { return nil }
-            guard let r = booking.fields.boardroomID, !r.isEmpty else { return nil }
-            return (booking, d, BoardroomsAPI.shortDateText(from: d), r)
+            guard let dateInt = booking.fields.date else { return nil }
+            guard let roomID = booking.fields.boardroomID, !roomID.isEmpty else { return nil }
+            return (booking, dateInt, BoardroomsAPI.shortDateText(from: dateInt), roomID)
         }
         .sorted { $0.dateInt < $1.dateInt }
     }
@@ -71,9 +106,9 @@ struct BookingView: View {
 
                             HStack(spacing: 12) {
                                 Button {
-                                    startEditing(booking: booking)
+                                    startEdit(booking: booking)
                                 } label: {
-                                    Text("Edit date")
+                                    Text("Edit date (PUT)")
                                         .font(.caption)
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 12)
@@ -86,7 +121,7 @@ struct BookingView: View {
                                 Button {
                                     Task { await deleteBooking(booking: booking) }
                                 } label: {
-                                    Text("Delete")
+                                    Text("Delete (DEL)")
                                         .font(.caption)
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 12)
@@ -107,39 +142,93 @@ struct BookingView: View {
         }
         .navigationTitle("My Bookings")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $editingBooking) { booking in
-            EditBookingDaySheet(
-                booking: booking,
-                boardrooms: boardrooms,
-                initialIndex: editingSelectedIndex,
-                onSave: { chosenDate in
-                    await saveEditedDate(for: booking, newDate: chosenDate)
-                },
-                onCancel: {
-                    editingBooking = nil
-                }
-            )
+        .sheet(item: $editingBooking) { b in
+            editSheet(for: b)
+                .presentationDetents([.medium])
         }
     }
 
-    private func startEditing(booking: BookingData) {
+    private func startEdit(booking: BookingData) {
         errorText = ""
-        let currentDate = (booking.fields.date.flatMap { BoardroomsAPI.dateFromInt($0) }) ?? Date()
-        editingSelectedIndex = monthIndex(for: currentDate)
+        if let di = booking.fields.date,
+           let d = BoardroomsAPI.dateFromInt(di) {
+            let cal = BoardroomsAPI.gregorianCalendar
+            let day = cal.component(.day, from: d)
+            editDayIndex = max(0, min(day - 1, days.count - 1))
+        } else {
+            editDayIndex = 0
+        }
         editingBooking = booking
     }
 
-    private func saveEditedDate(for booking: BookingData, newDate: Date) async {
+    private func editSheet(for booking: BookingData) -> some View {
+        VStack(spacing: 14) {
+            Text("Choose a day in \(monthTitle)")
+                .font(.headline)
+                .padding(.top, 10)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 18) {
+                    ForEach(days.indices, id: \.self) { index in
+                        let d = days[index]
+                        Button {
+                            editDayIndex = index
+                        } label: {
+                            DayChip(day: d.day, weekDay: d.weekDay, isSelected: editDayIndex == index)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+
+            Button {
+                Task { await saveEditedDate(booking: booking) }
+            } label: {
+                Text("Save")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.OR_1)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 16)
+            .disabled(busyIDs.contains(booking.id))
+
+            Spacer(minLength: 6)
+        }
+    }
+
+    private func saveEditedDate(booking: BookingData) async {
         errorText = ""
         busyIDs.insert(booking.id)
         defer { busyIDs.remove(booking.id) }
 
-        let newDateInt = BoardroomsAPI.dateInt(from: newDate)
+        guard let roomID = booking.fields.boardroomID, !roomID.isEmpty else {
+            errorText = "Missing boardroom id"
+            return
+        }
+        guard let employeeID = booking.fields.employeeID, !employeeID.isEmpty else {
+            errorText = "Missing employee id"
+            return
+        }
+        guard days.indices.contains(editDayIndex) else {
+            errorText = "Invalid day"
+            return
+        }
+
+        let selected = days[editDayIndex].date
+        let newDateInt = BoardroomsAPI.dateInt(from: selected)
+        let status = booking.fields.status ?? "Confirmed"
 
         do {
-            _ = try await BookingData.updateBookingDate(
-                bookingID: booking.id,
-                newDate: newDateInt
+            _ = try await BookingData.updateBookingPUT(
+                id: booking.id,
+                status: status,
+                employeeID: employeeID,
+                boardroomID: roomID,
+                date: newDateInt
             )
             editingBooking = nil
             if let onChanged { await onChanged() }
@@ -154,7 +243,8 @@ struct BookingView: View {
         defer { busyIDs.remove(booking.id) }
 
         do {
-            try await BookingData.deleteBooking(bookingID: booking.id)
+            let ok = try await BookingData.deleteBooking(id: booking.id)
+            if ok == false { errorText = "Delete failed" }
             if let onChanged { await onChanged() }
         } catch {
             errorText = error.localizedDescription
@@ -169,146 +259,6 @@ struct BookingView: View {
         if lower.contains(where: { $0.contains("mic") }) { out.append(.mic) }
         if lower.contains(where: { $0.contains("control") || $0.contains("controller") }) { out.append(.control) }
         return out
-    }
-
-    private func monthIndex(for date: Date) -> Int {
-        let day = calendar.component(.day, from: date)
-        return max(0, day - 1)
-    }
-}
-
-private struct EditBookingDaySheet: View {
-
-    let booking: BookingData
-    let boardrooms: [BoardroomRecord]
-    let initialIndex: Int
-    let onSave: (Date) async -> Void
-    let onCancel: () -> Void
-
-    @Environment(\.dismiss) private var dismiss
-
-    private var calendar: Calendar { BoardroomsAPI.gregorianCalendar }
-
-    struct DayModel: Identifiable {
-        let id = UUID()
-        let date: Date
-        let day: String
-        let weekDay: String
-    }
-
-    @State private var selectedIndex: Int
-    @State private var isSaving = false
-
-    init(
-        booking: BookingData,
-        boardrooms: [BoardroomRecord],
-        initialIndex: Int,
-        onSave: @escaping (Date) async -> Void,
-        onCancel: @escaping () -> Void
-    ) {
-        self.booking = booking
-        self.boardrooms = boardrooms
-        self.initialIndex = initialIndex
-        self.onSave = onSave
-        self.onCancel = onCancel
-        _selectedIndex = State(initialValue: initialIndex)
-    }
-
-    private var monthTitle: String {
-        let f = DateFormatter()
-        f.calendar = calendar
-        f.dateFormat = "MMMM"
-        return f.string(from: Date())
-    }
-
-    private var days: [DayModel] {
-        let today = Date()
-        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
-        let range = calendar.range(of: .day, in: .month, for: today) ?? 1..<2
-
-        let formatterDay = DateFormatter()
-        formatterDay.calendar = calendar
-        formatterDay.dateFormat = "d"
-
-        let formatterWeekday = DateFormatter()
-        formatterWeekday.calendar = calendar
-        formatterWeekday.dateFormat = "EEE"
-
-        return range.compactMap { day in
-            guard let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) else { return nil }
-            return DayModel(date: date, day: formatterDay.string(from: date), weekDay: formatterWeekday.string(from: date))
-        }
-    }
-
-    private var selectedDate: Date {
-        guard days.indices.contains(selectedIndex) else { return Date() }
-        return days[selectedIndex].date
-    }
-
-    private var isPastSelectedDay: Bool {
-        let todayStart = calendar.startOfDay(for: Date())
-        let pickStart = calendar.startOfDay(for: selectedDate)
-        return pickStart < todayStart
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 14) {
-
-                Text("Select a new day")
-                    .font(.headline)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 18) {
-                        ForEach(days.indices, id: \.self) { i in
-                            let d = days[i]
-                            Button {
-                                selectedIndex = i
-                            } label: {
-                                DayChip(day: d.day, weekDay: d.weekDay, isSelected: selectedIndex == i)
-                                    .opacity(isDayDisabled(days[i].date) ? 0.35 : 1)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(isDayDisabled(days[i].date))
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                }
-
-                Spacer()
-            }
-            .navigationTitle("Edit date · \(monthTitle)")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        onCancel()
-                        dismiss()
-                    }
-                    .disabled(isSaving)
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(isSaving ? "Saving..." : "Save") {
-                        Task {
-                            isSaving = true
-                            await onSave(selectedDate)
-                            isSaving = false
-                            dismiss()
-                        }
-                    }
-                    .disabled(isSaving || isPastSelectedDay)
-                }
-            }
-        }
-    }
-
-    private func isDayDisabled(_ date: Date) -> Bool {
-        let todayStart = calendar.startOfDay(for: Date())
-        let pickStart = calendar.startOfDay(for: date)
-        return pickStart < todayStart
     }
 }
 
