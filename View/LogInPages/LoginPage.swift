@@ -69,7 +69,8 @@ struct login: View {
                 BoardRoomsView()
                     .navigationBarBackButtonHidden(true)
 
-            }
+               }
+            
             }
         }
     }

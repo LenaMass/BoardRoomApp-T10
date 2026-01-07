@@ -5,6 +5,7 @@ struct RoomDetailView: View {
     let initialDate: Date
     let onChanged: (() async -> Void)?
 
+    
     struct DayModel: Identifiable {
         let id = UUID()
         let date: Date
@@ -19,7 +20,6 @@ struct RoomDetailView: View {
     @State private var bookings: [BookingData] = []
     @State private var errorText: String = ""
     @State private var isLoading = false
-
     @State private var showSuccess = false
     @State private var successDate: Date = Date()
 
@@ -82,11 +82,38 @@ struct RoomDetailView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
 
-                    Image(room.imageName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 260)
-                        .clipped()
+                    Group {
+                        if let urlStr = room.imageURL,
+                           let url = URL(string: urlStr) {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .empty:
+                                    ZStack {
+                                        Color.white
+                                        ProgressView()
+                                    }
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                case .failure:
+                                    Image(room.imageName)
+                                        .resizable()
+                                        .scaledToFill()
+                                @unknown default:
+                                    Image(room.imageName)
+                                        .resizable()
+                                        .scaledToFill()
+                                }
+                            }
+                        } else {
+                            Image(room.imageName)
+                                .resizable()
+                                .scaledToFill()
+                        }
+                    }
+                    .frame(height: 260)
+                    .clipped()
 
                     HStack {
                         HStack(spacing: 6) {
@@ -136,7 +163,7 @@ struct RoomDetailView: View {
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(Color(.white))
+                                .background(Color.white)
                                 .cornerRadius(20)
                             }
                         }

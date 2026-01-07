@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		BFBF2C652F0AD5C00064DAD3 /* Secrets.xcconfig in Sources */ = {isa = PBXBuildFile; fileRef = BFBF2C642F0AD5BC0064DAD3 /* Secrets.xcconfig */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		BFBF2BBA2F0513820064DAD3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -31,9 +27,43 @@
 		BFBF2BAC2F0513800064DAD3 /* BoardRoomApp-T10.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BoardRoomApp-T10.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFBF2BB92F0513820064DAD3 /* BoardRoomApp-T10Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "BoardRoomApp-T10Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFBF2BC32F0513820064DAD3 /* BoardRoomApp-T10UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "BoardRoomApp-T10UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		BFBF2C202F0660780064DAD3 /* BoardRoomApp-T10-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "BoardRoomApp-T10-Info.plist"; sourceTree = "<group>"; };
 		BFBF2C642F0AD5BC0064DAD3 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		BF8E06502F0CE2F600C9D334 /* Exceptions for "BoardRoomApp-T10Tests" folder in "BoardRoomApp-T10" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BoardRoomApp_T10App.swift,
+			);
+			target = BFBF2BAB2F0513800064DAD3 /* BoardRoomApp-T10 */;
+		};
+		BF8E06512F0CE2F600C9D334 /* Exceptions for "BoardRoomApp-T10Tests" folder in "BoardRoomApp-T10Tests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BoardRoomApp_T10App.swift,
+			);
+			target = BFBF2BB82F0513820064DAD3 /* BoardRoomApp-T10Tests */;
+		};
+		BF8E06532F0CE40500C9D334 /* Exceptions for "Model" folder in "BoardRoomApp-T10" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Networking/Secret/BoardRoomApp-T10-Info.plist",
+				Networking/Secret/Secrets.xcconfig,
+			);
+			target = BFBF2BAB2F0513800064DAD3 /* BoardRoomApp-T10 */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		BF8E06542F0CE40500C9D334 /* Exceptions for "Model" folder in "Compile Sources" phase from "BoardRoomApp-T10" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = BFBF2BA82F0513800064DAD3 /* Sources */;
+			membershipExceptions = (
+				Networking/Secret/Secrets.xcconfig,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		BFBF2BAE2F0513800064DAD3 /* View */ = {
@@ -43,6 +73,10 @@
 		};
 		BFBF2BBC2F0513820064DAD3 /* BoardRoomApp-T10Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BF8E06502F0CE2F600C9D334 /* Exceptions for "BoardRoomApp-T10Tests" folder in "BoardRoomApp-T10" target */,
+				BF8E06512F0CE2F600C9D334 /* Exceptions for "BoardRoomApp-T10Tests" folder in "BoardRoomApp-T10Tests" target */,
+			);
 			path = "BoardRoomApp-T10Tests";
 			sourceTree = "<group>";
 		};
@@ -53,6 +87,10 @@
 		};
 		BFBF2BEA2F0514DA0064DAD3 /* Model */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BF8E06532F0CE40500C9D334 /* Exceptions for "Model" folder in "BoardRoomApp-T10" target */,
+				BF8E06542F0CE40500C9D334 /* Exceptions for "Model" folder in "Compile Sources" phase from "BoardRoomApp-T10" target */,
+			);
 			path = Model;
 			sourceTree = "<group>";
 		};
@@ -91,8 +129,6 @@
 		BFBF2BA32F0513800064DAD3 = {
 			isa = PBXGroup;
 			children = (
-				BFBF2C642F0AD5BC0064DAD3 /* Secrets.xcconfig */,
-				BFBF2C202F0660780064DAD3 /* BoardRoomApp-T10-Info.plist */,
 				BFBF2BEA2F0514DA0064DAD3 /* Model */,
 				BFBF2BAE2F0513800064DAD3 /* View */,
 				BFBF2BEB2F0514E20064DAD3 /* ViewModel */,
@@ -258,7 +294,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BFBF2C652F0AD5C00064DAD3 /* Secrets.xcconfig in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -270,40 +270,4 @@ struct RoomCardImage: View {
         }
     }
 }
-//
-//struct BookingView: View {
-//    let bookings: [BookingData]
-//    let boardrooms: [BoardroomRecord]
-//
-//    var body: some View {
-//        ScrollView(showsIndicators: false) {
-//            VStack(spacing: 12) {
-//                if bookings.isEmpty {
-//                    EmptyMyBookingCard()
-//                        .frame(height: 140)
-//                        .padding(.top, 12)
-//                } else {
-//                    ForEach(bookings.sorted(by: { $0.fields.date < $1.fields.date })) { b in
-//                        let title = BoardroomsAPI.boardroomName(for: b.fields.boardroomID, in: boardrooms) ?? "Boardroom"
-//                        let dateText = BoardroomsAPI.shortDateText(from: b.fields.date)
-//
-//                        RoomCard(
-//                            title: title,
-//                            floor: "",
-//                            people: "",
-//                            tag: .date(dateText),
-//                            imageName: "room1",
-//                            imageURL: nil,
-//                            features: []
-//                        )
-//                    }
-//                }
-//            }
-//            .padding(.horizontal, 16)
-//            .padding(.vertical, 12)
-//        }
-//        .navigationTitle("My Bookings")
-//        .navigationBarTitleDisplayMode(.inline)
-//    }
-//}
 
