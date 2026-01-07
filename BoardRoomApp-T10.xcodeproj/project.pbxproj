@@ -55,16 +55,6 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		BF8E06542F0CE40500C9D334 /* Exceptions for "Model" folder in "Compile Sources" phase from "BoardRoomApp-T10" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = BFBF2BA82F0513800064DAD3 /* Sources */;
-			membershipExceptions = (
-				Networking/Secret/Secrets.xcconfig,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		BFBF2BAE2F0513800064DAD3 /* View */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -89,7 +79,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				BF8E06532F0CE40500C9D334 /* Exceptions for "Model" folder in "BoardRoomApp-T10" target */,
-				BF8E06542F0CE40500C9D334 /* Exceptions for "Model" folder in "Compile Sources" phase from "BoardRoomApp-T10" target */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -229,7 +218,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2610;
-				LastUpgradeCheck = 2610;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					BFBF2BAB2F0513800064DAD3 = {
 						CreatedOnToolsVersion = 26.1.1;
@@ -387,6 +376,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -445,6 +435,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
