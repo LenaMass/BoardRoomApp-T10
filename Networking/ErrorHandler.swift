@@ -21,7 +21,7 @@ enum EmError: Error, LocalizedError {
         case .invalidEmployeeNumber:
             return "Invalid job number"
         case .missingAPIToken:
-            return "Missing APIToken (Target → Info → Custom iOS Target Properties)"
+            return "Missing APIToken"
         }
     }
 }
@@ -35,7 +35,7 @@ enum BoardroomsAPIError: Error, LocalizedError {
         switch self {
         case .invalidURL: return "Invalid URL"
         case .invalidResponse: return "Invalid response from server"
-        case .missingAPIToken: return "Missing APIToken (Target → Info → Custom iOS Target Properties)"
+        case .missingAPIToken: return "Missing APIToken"
         }
     }
 }
