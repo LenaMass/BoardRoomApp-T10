@@ -1,32 +1,31 @@
 import SwiftUI
 
-struct BannerView: View {
+struct BoardRoomsCard: View {
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.OR_1)
-
+            
             Circle()
                 .fill(Color.blueButton)
                 .frame(width: 75, height: 70)
                 .offset(x: -169, y: 77)
 
-            Image("Group 8777")
+            Image("board1")
                 .resizable()
-                .scaledToFit()
-                .frame(width: 100, height: 110)
-                .offset(x: 128, y: -27)
+//                .scaledToFit()
+//                .frame(width: 100, height: 110)
+//                .offset(x: 128, y: -27)
 
             HStack {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 0) {
                     Text("All board rooms")
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(.white)
                         .font(.system(size: 15))
 
                     Text("Available today")
-                        .font(.system(size: 30, weight: .bold))
+                        .font(.system(size: 27, weight: .bold))
                         .foregroundColor(.white)
                 }
+                .padding(.top,-40)
 
                 Spacer()
 
@@ -36,6 +35,7 @@ struct BannerView: View {
                         HStack(spacing: 8) {
                             Text("Book now")
                                 .foregroundColor(.white)
+                            
 
                             Circle()
                                 .fill(Color.white)
@@ -47,15 +47,19 @@ struct BannerView: View {
                                 )
                         }
                     }
+                    .padding(.horizontal)
+                    .padding(-10) //button postion
                 }
-                .frame(maxHeight: .infinity, alignment: .bottomTrailing)
-                .padding(.trailing, 22)
-                .padding(.bottom, 12)
+               // .frame(maxHeight: .infinity, alignment: .bottomTrailing)
+          
             }
-            .padding(.horizontal, 22)
+            .padding()
         }
         .frame(maxWidth: .infinity)
         .frame(height: 138)
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
+}
+#Preview {
+    BoardRoomsCard()
 }

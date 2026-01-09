@@ -12,13 +12,15 @@ struct BoardRoomsView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
 
-                        BannerView()
+                        BoardRoomsCard()
                             .padding(.top, 8)
 
                         VStack(spacing: 12) {
                             HStack {
-                                Text("My booking")
+                                Text("My bookings")
                                     .font(.headline)
+                                    .foregroundColor(.blueButton)
+                                
 
                                 Spacer()
 
@@ -71,15 +73,16 @@ struct BoardRoomsView: View {
                             HStack {
                                 Text("All bookings for \(vm.monthTitle)")
                                     .font(.headline)
+                                    .foregroundColor(.blueButton)
+
+                                    
 
                                 Spacer()
 
                                 if vm.isLoadingBookings {
                                     ProgressView()
                                 } else {
-                                    Text("Bookings this month: \(vm.bookingsCountThisMonth())")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
+                                    Text("")
                                 }
                             }
 
@@ -140,3 +143,6 @@ struct BoardRoomsView: View {
     }
 }
 
+#Preview {
+    BoardRoomsView()
+}

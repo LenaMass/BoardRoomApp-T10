@@ -34,7 +34,7 @@ enum BoardroomsAPI {
     }
 
     static func fetchData() async throws -> (bookings: [BookingData], boardrooms: [BoardroomRecord]) {
-        async let bookings = BookingData.getAllBookings()
+        async let bookings = BookingsService().getAllBookings()
         async let boardrooms = getAllBoardrooms()
         return try await (bookings: bookings, boardrooms: boardrooms)
     }
@@ -46,10 +46,7 @@ enum BoardroomsAPI {
     static func boardroomName(for roomID: String, in boardrooms: [BoardroomRecord]) -> String? {
         boardrooms.first(where: { $0.id == roomID })?.fields?.name
     }
-    
-    
-//Change Calendar func later (old approach)
-    
+
     static func dateInt(from date: Date) -> Int {
         let d = gregorianCalendar.startOfDay(for: date)
         let c = gregorianCalendar.dateComponents([.year, .month, .day], from: d)

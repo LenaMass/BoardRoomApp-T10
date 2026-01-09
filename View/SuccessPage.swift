@@ -6,7 +6,7 @@ struct BookingSuccessView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    private var messageText: String {
+    private var messageAttributed: AttributedString {
         let cal = BoardroomsAPI.gregorianCalendar
 
         let weekday = DateFormatter()
@@ -21,7 +21,15 @@ struct BookingSuccessView: View {
         full.timeZone = .current
         full.dateFormat = "MMMM d, yyyy"
 
-        return "Your booking for \(roomName) on \(weekday.string(from: date)),\n\(full.string(from: date)) is confirmed."
+        let emphasized = "\(roomName) on \(weekday.string(from: date)),\n\(full.string(from: date))"
+
+        var result = AttributedString("Your booking for \(emphasized) is confirmed.")
+
+        if let r = result.range(of: emphasized) {
+            result[r].font = .system(size: 15, weight: .semibold)
+        }
+
+        return result
     }
 
     var body: some View {
@@ -48,12 +56,18 @@ struct BookingSuccessView: View {
                 VStack(spacing: 14) {
                     Text("Booking Success!")
                         .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.blueButton)
 
-                    Text(messageText)
+                    Text(messageAttributed)
                         .font(.system(size: 16))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.blueButton)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 28)
+                        .frame(width: 358, height: 69)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.white)
+                        )
 
                     Spacer()
 

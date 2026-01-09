@@ -16,15 +16,10 @@ final class LoginViewModel: ObservableObject {
         loginError = ""
         isLoggedIn = false
 
-        guard let employeeNumber = Int(employeeNumberInput.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            loginError = "Invalid job number"
-            return
-        }
-
         do {
             let loggedUser = try await logindata.login(
-                employeeNumber: employeeNumber,
-                password: passwordInput
+                employeeNumberInput: employeeNumberInput,
+                passwordInput: passwordInput
             )
 
             guard let recID = loggedUser.recordID, !recID.isEmpty else {
@@ -39,7 +34,7 @@ final class LoginViewModel: ObservableObject {
             isLoggedIn = true
 
         } catch {
-            loginError = "Invalid number or password"
+            loginError = error.localizedDescription
         }
     }
 }
