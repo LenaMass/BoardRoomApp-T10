@@ -4,14 +4,8 @@ struct RoomDetailView: View {
     let room: RoomInfo
     let initialDate: Date
     let onChanged: (() async -> Void)?
-
     
-    struct DayModel: Identifiable {
-        let id = UUID()
-        let date: Date
-        let day: String
-        let weekDay: String
-    }
+    
 
     @AppStorage("employeeID") private var employeeID: String = ""
 
