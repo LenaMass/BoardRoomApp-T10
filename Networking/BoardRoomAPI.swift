@@ -1,11 +1,5 @@
 import Foundation
 
-enum BoardroomsAPIError: Error {
-    case invalidURL
-    case invalidResponse
-    case missingAPIToken
-}
-
 enum BoardroomsAPI {
 
     static let gregorianCalendar: Calendar = {
