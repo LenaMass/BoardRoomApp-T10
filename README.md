@@ -8,11 +8,12 @@
 <h2 align="left">App features: </h2>
 
 <ul>
+ <li>
  Meeting Room Availability Overview
 </li>
   <li>View the full list of meeting rooms with their availability status (available / unavailable)
 </li>
-  <li>P Book a Meeting Room 
+  <li> Book a Meeting Room 
 </li>
    <li>Book a meeting room for a specific date in a simple and intuitive way.
 </li>
