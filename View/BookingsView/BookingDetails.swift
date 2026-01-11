@@ -98,13 +98,12 @@ struct RoomDetailView: View {
                         Text("All bookings for \(vm.monthTitle)")
                             .font(.headline)
 
-                        
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 18) {
                                 ForEach(vm.days.indices, id: \.self) { index in
                                     let d = vm.days[index]
                                     Button { vm.selectedDayIndex = index } label: {
-                                        DayChip(day: d.day, weekDay: d.weekDay, isSelected: vm.selectedDayIndex == index)
+                                        CalendarDayChip(day: d.day, weekDay: d.weekDay, isSelected: vm.selectedDayIndex == index)
                                             .opacity(vm.isLoading ? 0.6 : 1)
                                     }
                                     .buttonStyle(.plain)

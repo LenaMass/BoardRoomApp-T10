@@ -1,7 +1,8 @@
 import Foundation
 import Combine
 
-// for fetching and the bookings calls
+
+//for fetching and del
 
 @MainActor
 final class RoomDetailViewModel: ObservableObject {
@@ -20,7 +21,7 @@ final class RoomDetailViewModel: ObservableObject {
     @Published var showSuccess: Bool = false
     @Published var successDate: Date = Date()
 
-    private let calendar: Calendar = BoardroomsAPI.gregorianCalendar
+    private let calendar: Calendar = .current
 
     init(room: RoomInfo, initialDate: Date, service: BookingsServicing? = nil) {
         self.room = room
@@ -29,15 +30,15 @@ final class RoomDetailViewModel: ObservableObject {
     }
 
     var monthTitle: String {
-        DayBuilder.monthTitle(for: initialDate, calendar: calendar)
+        DayBuilder.weekTitle(from: Date(), calendar: calendar)
     }
 
     var days: [DayModel] {
-        DayBuilder.days(inMonthOf: initialDate, calendar: calendar)
+        DayBuilder.weekStartingToday(from: Date(), calendar: calendar)
     }
 
     var selectedDate: Date {
-        guard days.indices.contains(selectedDayIndex) else { return initialDate }
+        guard days.indices.contains(selectedDayIndex) else { return Date() }
         return days[selectedDayIndex].date
     }
 
@@ -55,8 +56,7 @@ final class RoomDetailViewModel: ObservableObject {
     }
 
     func onAppearLoad() async {
-        let day = calendar.component(.day, from: initialDate)
-        selectedDayIndex = max(0, min(day - 1, days.count - 1))
+        selectedDayIndex = 0
         await fetchData()
     }
 

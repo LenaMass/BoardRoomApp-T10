@@ -3,6 +3,7 @@ import SwiftUI
 struct BoardRoomsView: View {
 
 @StateObject private var vm = BoardRoomsViewModel()
+    @State private var showAvailableToday = false
 
     var body: some View {
         NavigationStack {
@@ -12,7 +13,7 @@ struct BoardRoomsView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
 
-                        BoardRoomsCard()
+                        BoardRoomsCard(onBookNow: { showAvailableToday = true })
                             .padding(.top, 8)
 
                         VStack(spacing: 12) {
@@ -20,7 +21,6 @@ struct BoardRoomsView: View {
                                 Text("My bookings")
                                     .font(.headline)
                                     .foregroundColor(.blueButton)
-                                
 
                                 Spacer()
 
@@ -75,8 +75,6 @@ struct BoardRoomsView: View {
                                     .font(.headline)
                                     .foregroundColor(.blueButton)
 
-                                    
-
                                 Spacer()
 
                                 if vm.isLoadingBookings {
@@ -97,7 +95,7 @@ struct BoardRoomsView: View {
                                     ForEach(vm.days.indices, id: \.self) { index in
                                         let d = vm.days[index]
                                         Button { vm.selectedDayIndex = index } label: {
-                                            DayChip(day: d.day, weekDay: d.weekDay, isSelected: vm.selectedDayIndex == index)
+                                            CalendarDayChip(day: d.day, weekDay: d.weekDay, isSelected: vm.selectedDayIndex == index)
                                         }
                                     }
                                 }
@@ -133,12 +131,24 @@ struct BoardRoomsView: View {
                 }
             }
             .navigationTitle("Board Rooms")
+            .navigationBarBackButtonHidden(true)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.blueButton, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .task { await vm.bootstrap() }
             .refreshable { await vm.fetchData() }
+            .navigationDestination(isPresented: $showAvailableToday) {
+                AvailableRoomsTodayView(
+                    rooms: vm.apiRooms,
+                    isUnavailable: { room in
+                        vm.isRoomUnavailable(room, on: Date())
+                    },
+                    onChanged: {
+                        await vm.fetchData()
+                    }
+                )
+            }
         }
     }
 }
@@ -146,3 +156,4 @@ struct BoardRoomsView: View {
 #Preview {
     BoardRoomsView()
 }
+

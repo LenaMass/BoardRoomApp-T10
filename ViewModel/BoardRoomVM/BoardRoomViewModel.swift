@@ -4,47 +4,22 @@ import Combine
 @MainActor
 final class BoardRoomsViewModel: ObservableObject {
 
-    // Persisted user info (you used this in the View)
     @AppStorage("employeeID") private var employeeID: String = ""
 
-    // UI State
     @Published var boardrooms: [BoardroomRecord] = []
     @Published var bookings: [BookingData] = []
     @Published var selectedDayIndex: Int = 0
     @Published var bookingsError: String = ""
     @Published var isLoadingBookings: Bool = false
 
-    let calendar = BoardroomsAPI.gregorianCalendar
+    private let calendar: Calendar = .current
 
     var monthTitle: String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.dateFormat = "MMMM"
-        return formatter.string(from: Date())
+        DayBuilder.weekTitle(from: Date(), calendar: calendar)
     }
 
     var days: [DayModel] {
-        let today = Date()
-        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
-        let range = calendar.range(of: .day, in: .month, for: today) ?? 1..<2
-
-        let formatterDay = DateFormatter()
-        formatterDay.calendar = calendar
-        formatterDay.dateFormat = "d"
-
-        let formatterWeekday = DateFormatter()
-        formatterWeekday.calendar = calendar
-        formatterWeekday.dateFormat = "EEE"
-
-        return range.compactMap { day in
-            guard let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) else { return nil }
-            return DayModel(date: date, day: formatterDay.string(from: date), weekDay: formatterWeekday.string(from: date))
-        }
-    }
-
-    var todayIndexInMonth: Int {
-        let day = calendar.component(.day, from: Date())
-        return max(0, min(day - 1, days.count - 1))
+        DayBuilder.weekStartingToday(from: Date(), calendar: calendar)
     }
 
     var selectedDate: Date {
@@ -122,7 +97,7 @@ final class BoardRoomsViewModel: ObservableObject {
     }
 
     func bootstrap() async {
-        selectedDayIndex = todayIndexInMonth
+        selectedDayIndex = DayBuilder.indexOfToday(in: days, calendar: calendar)
         await fetchData()
     }
 
@@ -151,3 +126,4 @@ final class BoardRoomsViewModel: ObservableObject {
         return out
     }
 }
+

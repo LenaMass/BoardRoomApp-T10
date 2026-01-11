@@ -2,8 +2,6 @@ import Foundation
 import Combine
 
 
-//for the edit bookings and deletes 
-
 @MainActor
 final class MyBookingsViewModel: ObservableObject {
     struct DisplayBooking: Identifiable, Hashable {
@@ -25,7 +23,7 @@ final class MyBookingsViewModel: ObservableObject {
 
     private let onChanged: (() async -> Void)?
     private let service: BookingsServicing
-    private let calendar: Calendar = BoardroomsAPI.gregorianCalendar
+    private let calendar: Calendar = .current
 
     init(bookings: [BookingData], boardrooms: [BoardroomRecord], onChanged: (() async -> Void)?, service: BookingsServicing) {
         self.bookings = bookings
@@ -40,11 +38,11 @@ final class MyBookingsViewModel: ObservableObject {
     }
 
     var monthTitle: String {
-        DayBuilder.monthTitle(for: Date(), calendar: calendar)
+        DayBuilder.weekTitle(from: Date(), calendar: calendar)
     }
 
     var days: [DayModel] {
-        DayBuilder.days(inMonthOf: Date(), calendar: calendar)
+        DayBuilder.weekStartingToday(from: Date(), calendar: calendar)
     }
 
     var displayBookings: [DisplayBooking] {
@@ -64,13 +62,15 @@ final class MyBookingsViewModel: ObservableObject {
 
     func startEdit(booking: BookingData) {
         errorText = ""
+
         if let di = booking.fields.date,
-           let d = BoardroomsAPI.dateFromInt(di) {
-            let day = calendar.component(.day, from: d)
-            editDayIndex = max(0, min(day - 1, days.count - 1))
+           let d = BoardroomsAPI.dateFromInt(di),
+           let idx = days.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: d) }) {
+            editDayIndex = idx
         } else {
             editDayIndex = 0
         }
+
         editingBooking = booking
     }
 

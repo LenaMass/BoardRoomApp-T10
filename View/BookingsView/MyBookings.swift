@@ -199,7 +199,7 @@ private struct EditBookingSheetView: View {
                             Button {
                                 editDayIndex = index
                             } label: {
-                                DayChip(day: d.day, weekDay: d.weekDay, isSelected: editDayIndex == index)
+                                CalendarDayChip(day: d.day, weekDay: d.weekDay, isSelected: editDayIndex == index)
                             }
                             .buttonStyle(.plain)
                         }
@@ -224,3 +224,4 @@ private struct EditBookingSheetView: View {
         }
     }
 }
+

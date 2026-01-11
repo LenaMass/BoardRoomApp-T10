@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct BoardRoomsCard: View {
+    var onBookNow: () -> Void = {}
+
     var body: some View {
         ZStack {
-            
+
             Circle()
                 .fill(Color.blueButton)
                 .frame(width: 75, height: 70)
@@ -11,9 +13,6 @@ struct BoardRoomsCard: View {
 
             Image("board1")
                 .resizable()
-//                .scaledToFit()
-//                .frame(width: 100, height: 110)
-//                .offset(x: 128, y: -27)
 
             HStack {
                 VStack(alignment: .leading, spacing: 0) {
@@ -25,17 +24,16 @@ struct BoardRoomsCard: View {
                         .font(.system(size: 27, weight: .bold))
                         .foregroundColor(.white)
                 }
-                .padding(.top,-40)
+                .padding(.top, -40)
 
                 Spacer()
 
                 VStack {
                     Spacer()
-                    Button(action: {}) {
+                    Button(action: onBookNow) {
                         HStack(spacing: 8) {
                             Text("Book now")
                                 .foregroundColor(.white)
-                            
 
                             Circle()
                                 .fill(Color.white)
@@ -48,10 +46,8 @@ struct BoardRoomsCard: View {
                         }
                     }
                     .padding(.horizontal)
-                    .padding(-10) //button postion
+                    .padding(-10)
                 }
-               // .frame(maxHeight: .infinity, alignment: .bottomTrailing)
-          
             }
             .padding()
         }
@@ -60,6 +56,8 @@ struct BoardRoomsCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
+
 #Preview {
     BoardRoomsCard()
 }
+
