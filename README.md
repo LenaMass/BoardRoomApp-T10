@@ -1,5 +1,4 @@
-<h1 align="left">Boardrooms App
-</h1>
+<h1 align="left">Boardrooms App </h1>
 
 <h2 align="left">An iOS application that simplifies boardroom scheduling by enabling users to view room availability, book meeting rooms on specific dates, and manage their bookings efficiently.
 </h2>
